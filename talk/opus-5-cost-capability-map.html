@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>THE MAP — Claude models × effort, July 2026</title>
+<style>
+  :root{
+    --bg:#0E1116; --panel:#141922; --grid:#222A34; --ink:#E8EDF2; --muted:#8A94A0;
+    --haiku:#45D6C4; --sonnet:#F2B84B; --opus48:#7A8CA6; --opus5:#FF6A55; --fable:#A78BFA;
+    --gpt:#5B9BD5; --gemini:#7BC47F; --grok:#C9B458; --deepseek:#B87FD9;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:"Segoe UI", system-ui, -apple-system, sans-serif;
+    min-height:100vh; display:flex; flex-direction:column; padding:28px 32px 16px;
+  }
+  .eyebrow{
+    font-family:ui-monospace, "SF Mono", Menlo, monospace;
+    font-size:12px; letter-spacing:.22em; color:var(--muted); text-transform:uppercase;
+  }
+  h1{font-size:clamp(20px,3vw,32px); font-weight:650; letter-spacing:-.01em; margin-top:6px;}
+  h1 .accent{color:var(--opus5);}
+  .sub{color:var(--muted); font-size:14px; margin-top:4px; max-width:70ch;}
+  header{display:flex; justify-content:space-between; align-items:flex-end; gap:24px; flex-wrap:wrap;}
+  .legend{display:flex; gap:16px; flex-wrap:wrap; font-size:13px; align-items:center; justify-content:flex-end; max-width:420px;}
+  .legend span{display:flex; align-items:center; gap:7px; color:var(--muted);}
+  .dot{width:10px; height:10px; border-radius:50%;}
+  .ghost-legend{display:none;}
+  body.show-ghosts .ghost-legend{display:flex;}
+  #toggle-labs{
+    background:transparent; color:var(--muted); border:1px solid var(--grid);
+    border-radius:7px; padding:6px 12px; font-size:12.5px; cursor:pointer;
+    font-family:ui-monospace,Menlo,monospace; transition:all .15s;
+  }
+  #toggle-labs:hover, #toggle-labs:focus-visible{color:var(--ink); border-color:var(--muted); outline:none;}
+  body.show-ghosts #toggle-labs{color:var(--ink); border-color:var(--gpt);}
+  #chartwrap{flex:1; min-height:420px; margin-top:18px; position:relative;}
+  svg{width:100%; height:100%; display:block;}
+  .axis-label{fill:var(--muted); font-size:12px; font-family:ui-monospace,Menlo,monospace;}
+  .tick{fill:var(--muted); font-size:11px; font-family:ui-monospace,Menlo,monospace;}
+  .pt{cursor:pointer; transition:r .15s;}
+  .curve{fill:none; stroke-width:2.5; opacity:.85;}
+  .plabel{font-size:11px; font-family:ui-monospace,Menlo,monospace; fill:var(--muted);}
+  .mlabel{font-size:13px; font-weight:600;}
+  .zone-label{font-size:11px; font-family:ui-monospace,Menlo,monospace; letter-spacing:.18em; opacity:.55;}
+  .callout{font-size:12px; fill:var(--ink); opacity:.9;}
+  #ghosts{display:none;}
+  body.show-ghosts #ghosts{display:block;}
+  #ghosts .curve{opacity:.5;}
+  #ghosts .pt{opacity:.6;}
+  #ghosts .mlabel{opacity:.7; font-weight:500;}
+  #tooltip{
+    position:absolute; pointer-events:none; background:var(--panel);
+    border:1px solid var(--grid); border-radius:8px; padding:10px 12px;
+    font-size:12.5px; line-height:1.45; max-width:290px; opacity:0;
+    transition:opacity .12s; box-shadow:0 8px 24px rgba(0,0,0,.5);
+  }
+  #tooltip b{display:block; margin-bottom:3px;}
+  footer{
+    margin-top:12px; padding-top:10px; border-top:1px solid var(--grid);
+    display:flex; justify-content:space-between; gap:16px; flex-wrap:wrap;
+    font-size:11.5px; color:var(--muted);
+  }
+  footer .chip{
+    font-family:ui-monospace,Menlo,monospace;
+    border:1px solid var(--grid); border-radius:6px; padding:4px 8px;
+  }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <div class="eyebrow">The map · July 2026</div>
+    <h1>Effort moves you along a curve. <span class="accent">Model choice jumps between curves.</span></h1>
+    <div class="sub">Each dot is one (model, effort) pair. Hover any dot for the claim behind its position.</div>
+  </div>
+  <div class="legend">
+    <span><i class="dot" style="background:var(--haiku)"></i>Haiku 4.5</span>
+    <span><i class="dot" style="background:var(--sonnet)"></i>Sonnet 5</span>
+    <span><i class="dot" style="background:var(--opus48); outline:2px dashed var(--opus48); outline-offset:2px;"></i>Opus 4.8 (ref)</span>
+    <span><i class="dot" style="background:var(--opus5)"></i>Opus 5</span>
+    <span><i class="dot" style="background:var(--fable)"></i>Fable 5</span>
+    <span class="ghost-legend"><i class="dot" style="background:var(--gpt)"></i>GPT-5.6</span>
+    <span class="ghost-legend"><i class="dot" style="background:var(--gemini)"></i>Gemini 3</span>
+    <span class="ghost-legend"><i class="dot" style="background:var(--grok)"></i>Grok 4.5</span>
+    <span class="ghost-legend"><i class="dot" style="background:var(--deepseek)"></i>DeepSeek v4</span>
+    <button id="toggle-labs" aria-pressed="false">show other labs</button>
+  </div>
+</header>
+
+<div id="chartwrap">
+  <svg id="chart" viewBox="0 0 1000 560" preserveAspectRatio="xMidYMid meet"></svg>
+  <div id="tooltip"></div>
+</div>
+
+<footer>
+  <div>Positions are <b>illustrative</b> — synthesized from published pricing, Anthropic benchmark claims, and Artificial Analysis Intelligence-vs-Cost data. Per-effort scores aren't published; cross-lab dials are normalized by token spend, not parameter names. Several cross-lab numbers are vendor-reported.</div>
+  <div class="chip">thinking: on by default · off allowed only at ≤ high · thinking-on @ low usually beats thinking-off at similar cost</div>
+</footer>
+
+<script>
+const W=1000,H=560,M={l:70,r:180,t:30,b:56};
+const iw=W-M.l-M.r, ih=H-M.t-M.b;
+const xmin=0.6,xmax=36, ymin=48,ymax=96;
+const X=c=>M.l+iw*(Math.log(c/xmin)/Math.log(xmax/xmin));
+const Y=v=>M.t+ih*(1-(v-ymin)/(ymax-ymin));
+
+const C={haiku:"#45D6C4",sonnet:"#F2B84B",opus48:"#7A8CA6",opus5:"#FF6A55",fable:"#A78BFA",
+         gpt:"#5B9BD5",gemini:"#7BC47F",grok:"#C9B458",deepseek:"#B87FD9"};
+
+const series=[
+ {name:"Haiku 4.5",color:C.haiku,pts:[
+   {e:"—",c:1,v:56,note:"<b>Haiku 4.5</b>Anthropic's efficiency tier: built for parallelized execution, subagents, and latency-sensitive paths. The fan-out workhorse."}]},
+ {name:"Sonnet 5",color:C.sonnet,pts:[
+   {e:"low",c:2.2,v:66,note:"<b>Sonnet 5 · low</b>High-volume, well-scoped tasks where cost matters."},
+   {e:"med",c:3.2,v:72,note:"<b>Sonnet 5 · medium</b>Everyday agentic work at mid-tier pricing ($2/$10 intro to Aug 31)."},
+   {e:"high",c:4.8,v:77,note:"<b>Sonnet 5 · high</b>Performs close to Opus 4.8 — beat it on Terminal-Bench 2.1 (80.4 vs 74.6), the first Sonnet to pass its Opus sibling on a major coding benchmark."},
+   {e:"xhigh",c:7.5,v:80,note:"<b>Sonnet 5 · xhigh</b>⚠ Cost approaches Opus-4.8-class here while trailing on several benchmarks — the curves cross: jump tiers instead."}]},
+ {name:"Opus 4.8",color:C.opus48,ref:true,pts:[
+   {e:"high",c:9,v:77,note:"<b>Opus 4.8 · high (reference)</b>The previous workhorse. Same $5/$25 price as Opus 5 — which more than doubles its Frontier-Bench score at lower cost per task."}]},
+ {name:"Opus 5",color:C.opus5,star:true,pts:[
+   {e:"low",c:5.5,v:76,note:"<b>Opus 5 · low</b>Low & medium are meaningfully stronger than on any prior Opus — strong quality at a fraction of the tokens and latency. Use liberally where evals hold."},
+   {e:"med",c:7,v:81,note:"<b>Opus 5 · medium</b>Work you'd never have trusted to medium on 4.8 may run fine here, at a real saving."},
+   {e:"high",c:10,v:85,note:"<b>Opus 5 · high</b>The API default. Same price as Opus 4.8, new state of the art on Frontier-Bench and GDPval-AA."},
+   {e:"xhigh",c:15,v:90,note:"<b>Opus 5 · xhigh</b>Recommended for demanding coding & agentic work. CursorBench 3.2: 70.1 vs Fable's 70.4 — near-parity at half the cost. Frontier-Bench peaks here (43.3 vs Fable's 33.7)."},
+   {e:"max",c:19,v:90.5,note:"<b>Opus 5 · max</b>Benchmark-dependent peak: tops the Artificial Analysis Intelligence Index at 61 — highest of 170 tracked models, one point above Fable 5 — and leads GDPval-AA v2 by >100 Elo. Yet Frontier-Bench peaks at xhigh. At the very top, 'better' depends on the meter."}]},
+ {name:"Fable 5",color:C.fable,pts:[
+   {e:"high",c:20,v:89.5,note:"<b>Fable 5 · high</b>Mythos-class at $10/$50. Retains real edges: SWE-bench Pro (+0.8), factual knowledge (AA-Omniscience), legal & health margins, and creative/visual polish in hands-on tests."},
+   {e:"xhigh",c:30,v:91,note:"<b>Fable 5 · xhigh</b>AA Index 60 vs Opus 5's 61; Opus leads Frontier-Bench by 9.6 pts and the AA agentic suites by wide Elo margins — at half the price. The top of the market is an overlap, not a hierarchy."}]}
+];
+
+const ghosts=[
+ {name:"GPT-5.6 Luna",color:C.gpt,pts:[
+   {e:"low",c:2,v:70,note:"<b>GPT-5.6 Luna · low</b>OpenAI's cost-efficiency star. Artificial Analysis: for any Terra effort level, a Luna or Sol level is more intelligent at no extra cost — Terra is dominated (which is why it's not on this map)."},
+   {e:"high",c:4,v:79,note:"<b>GPT-5.6 Luna · high</b>Per AA's effort-curve charts, Luna pushes past GPT-5.5 on the Pareto frontier across reasoning efforts."}]},
+ {name:"GPT-5.6 Sol",color:C.gpt,dash:"7 4",pts:[
+   {e:"med",c:9,v:85,note:"<b>GPT-5.6 Sol · medium</b>OpenAI's flagship curve. Also added a max reasoning setting plus an 'ultra' mode that farms work to parallel subagents — same convergence on the dial."},
+   {e:"high",c:15,v:89,note:"<b>GPT-5.6 Sol · high</b>The two flagship curves track closely through this region — the cross-lab race is now curve-vs-curve, not point-vs-point."},
+   {e:"max",c:26,v:92,note:"<b>GPT-5.6 Sol · max</b>OpenAI's claim: within one point of Fable 5 on the AA Intelligence Index in 61% less time. Vendor-reported — but the shape of the claim matches Anthropic's Opus-vs-Fable pitch."}]},
+ {name:"Gemini 3 Pro",color:C.gemini,pts:[
+   {e:"think",c:8,v:82,note:"<b>Gemini 3 Pro · thinking</b>Google's dial: thinking levels rather than effort names — same mechanism, different label. Cross-lab comparisons normalize by token spend."},
+   {e:"deep",c:16,v:87,note:"<b>Gemini 3 Pro · Deep Think</b>The top of Google's dial. Every major lab now ships one: the 2026 question is 'which model, at what effort?'"}]},
+ {name:"Grok 4.5",color:C.grok,pts:[
+   {e:"high",c:3.5,v:80,note:"<b>Grok 4.5 · high</b>AA Index 54 vs Fable's 60 — at ~9x lower cost per Index task ($0.31 vs $2.75). Sits on the cross-lab Pareto frontier: cheap models aren't off the map, they're a different point on it."}]},
+ {name:"DeepSeek v4",color:C.deepseek,pts:[
+   {e:"flash",c:0.9,v:66,note:"<b>DeepSeek v4 Flash</b>AA Index 44 at ~69x cheaper than Fable per task. Broader context: 9 of the 13 models on AA's intelligence-price frontier are open-weights — the fan-out zone is contested territory."}]}
+];
+
+const svg=document.getElementById("chart");
+const NS="http://www.w3.org/2000/svg";
+function el(t,a,parent){const n=document.createElementNS(NS,t);for(const k in a)n.setAttribute(k,a[k]);(parent||svg).appendChild(n);return n;}
+
+// zones
+el("rect",{x:M.l,y:M.t,width:X(3)-M.l,height:ih,fill:C.haiku,opacity:.045});
+el("rect",{x:X(12),y:M.t,width:M.l+iw-X(12),height:ih,fill:C.opus5,opacity:.04});
+el("text",{x:M.l+10,y:M.t+18,class:"zone-label",fill:C.haiku}).textContent="FAN-OUT ZONE";
+el("text",{x:X(12)+10,y:M.t+18,class:"zone-label",fill:C.opus5}).textContent="JUDGMENT ZONE";
+
+// grid + ticks
+[1,2,4,8,16,32].forEach(c=>{
+  el("line",{x1:X(c),y1:M.t,x2:X(c),y2:M.t+ih,stroke:"var(--grid)","stroke-width":1});
+  el("text",{x:X(c),y:M.t+ih+18,class:"tick","text-anchor":"middle"}).textContent=c+"×";
+});
+[50,60,70,80,90].forEach(v=>{
+  el("line",{x1:M.l,y1:Y(v),x2:M.l+iw,y2:Y(v),stroke:"var(--grid)","stroke-width":1});
+  el("text",{x:M.l-10,y:Y(v)+4,class:"tick","text-anchor":"end"}).textContent=v;
+});
+el("text",{x:M.l+iw/2,y:H-8,class:"axis-label","text-anchor":"middle"}).textContent="relative cost per task (log) →";
+el("text",{x:18,y:M.t+ih/2,class:"axis-label",transform:`rotate(-90 18 ${M.t+ih/2})`,"text-anchor":"middle"}).textContent="capability index (illustrative) →";
+
+const tooltip=document.getElementById("tooltip");
+const wrap=document.getElementById("chartwrap");
+const ghostGroup=el("g",{id:"ghosts"});
+
+function draw(s, parent){
+  if(s.pts.length>1){
+    const d=s.pts.map((p,i)=>(i?"L":"M")+X(p.c)+" "+Y(p.v)).join(" ");
+    el("path",{d,class:"curve",stroke:s.color,"stroke-dasharray":s.ref?"5 5":(s.ghost?(s.dash||"3 4"):"none")},parent);
+  }
+  s.pts.forEach((p,i)=>{
+    const r=s.star?7:(s.ghost?4.5:5.5);
+    if(s.ref) el("circle",{cx:X(p.c),cy:Y(p.v),r:r+4,fill:"none",stroke:s.color,"stroke-dasharray":"3 3"},parent);
+    const dot=el("circle",{cx:X(p.c),cy:Y(p.v),r,fill:s.ghost?"var(--bg)":s.color,stroke:s.ghost?s.color:"#0E1116","stroke-width":s.ghost?1.8:1.5,class:"pt"},parent);
+    if(p.e!=="—"&&!s.ghost) el("text",{x:X(p.c),y:Y(p.v)-12,class:"plabel","text-anchor":"middle"},parent).textContent=p.e;
+    if(i===s.pts.length-1){
+      el("text",{x:X(p.c)+13,y:Y(p.v)+4,class:"mlabel",fill:s.color},parent).textContent=s.name;
+    }
+    dot.addEventListener("mousemove",ev=>{
+      tooltip.innerHTML=p.note;
+      tooltip.style.opacity=1;
+      const b=wrap.getBoundingClientRect();
+      let tx=ev.clientX-b.left+14, ty=ev.clientY-b.top-10;
+      if(tx+300>b.width) tx-=320;
+      tooltip.style.left=tx+"px"; tooltip.style.top=ty+"px";
+      dot.setAttribute("r",r+2.5);
+    });
+    dot.addEventListener("mouseleave",()=>{tooltip.style.opacity=0;dot.setAttribute("r",r);});
+  });
+}
+
+ghosts.forEach(s=>{s.ghost=true;draw(s,ghostGroup);});
+series.forEach(s=>draw(s,svg));
+
+// callout: curves crossing (Sonnet xhigh vs Opus 5 low/med)
+const cx1=X(6.4), cy1=Y(78.5);
+el("line",{x1:cx1,y1:cy1-38,x2:cx1,y2:cy1+8,stroke:"var(--muted)","stroke-width":1,"stroke-dasharray":"2 3"});
+el("text",{x:cx1,y:cy1-46,class:"callout","text-anchor":"middle"}).textContent="curves cross → jump tiers";
+
+// callout: top-of-market overlap (Opus 5 max vs Fable)
+const cx2=X(24), cy2=Y(90.3);
+el("line",{x1:cx2,y1:cy2+26,x2:cx2,y2:cy2-2,stroke:"var(--muted)","stroke-width":1,"stroke-dasharray":"2 3"});
+el("text",{x:cx2,y:cy2+40,class:"callout","text-anchor":"middle"}).textContent="overlap, not hierarchy";
+
+// toggle
+const btn=document.getElementById("toggle-labs");
+btn.addEventListener("click",()=>{
+  const on=document.body.classList.toggle("show-ghosts");
+  btn.textContent=on?"hide other labs":"show other labs";
+  btn.setAttribute("aria-pressed",on);
+});
+</script>
+</body>
+</html>
