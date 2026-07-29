@@ -1,0 +1,14 @@
+# compiled binary (built with: go build ./cmd/redline)
+/redline
+/redline.exe
+
+# node / test tooling that is never part of the tool
+node_modules/
+package-lock.json
+/test-results/
+/.playwright/
+*.tgz
+
+# scratch
+*.log
+.DS_Store

@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Waypoint — deploy tracking for small teams</title>
+<style>
+  :root {
+    --bg: #0b0d12; --panel: #12151c; --ink: #eef1f6; --muted: #97a1b3;
+    --line: #232837; --accent: #6c8cff; --accent-ink: #0b0d12;
+  }
+  @media (prefers-color-scheme: light) {
+    :root { --bg: #f7f8fb; --panel: #ffffff; --ink: #151821; --muted: #5b6474; --line: #e4e7ee; --accent: #3b5bfd; --accent-ink: #ffffff; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  }
+  .wrap { max-width: 920px; margin: 0 auto; padding: 0 24px; }
+  nav.top {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 18px 0; border-bottom: 1px solid var(--line);
+  }
+  .logo { font-weight: 800; letter-spacing: -0.02em; font-size: 18px; display: flex; align-items: center; gap: 8px; }
+  .logo .mark { width: 10px; height: 10px; border-radius: 3px; background: var(--accent); display: inline-block; }
+  .navlinks { display: flex; gap: 22px; font-size: 13.5px; color: var(--muted); }
+  .navlinks a { color: inherit; text-decoration: none; }
+  .navcta { background: var(--accent); color: var(--accent-ink); border: 0; padding: 8px 15px; border-radius: 7px; font-size: 13.5px; font-weight: 600; }
+
+  header.hero { padding: 72px 0 56px; text-align: center; }
+  .kicker { display: inline-block; font-size: 11.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--accent); font-weight: 700; margin-bottom: 14px; }
+  h1 { font-size: 44px; line-height: 1.08; letter-spacing: -0.02em; margin: 0 0 16px; }
+  .sub { font-size: 17px; color: var(--muted); max-width: 560px; margin: 0 auto 30px; }
+  .cta-row { display: flex; gap: 12px; justify-content: center; }
+  .btn { padding: 12px 22px; border-radius: 9px; font-size: 14.5px; font-weight: 600; border: 1px solid transparent; cursor: pointer; text-decoration: none; display: inline-block; }
+  .btn.primary { background: var(--accent); color: var(--accent-ink); }
+  .btn.ghost { border-color: var(--line); color: var(--ink); background: transparent; }
+
+  section.beta-banner {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+    padding: 12px 18px; margin: 0 0 56px; font-size: 13.5px; color: var(--muted);
+    display: flex; align-items: center; gap: 10px;
+  }
+  section.beta-banner b { color: var(--ink); }
+
+  section.features { padding: 8px 0 60px; }
+  .features h2 { font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); text-align: center; margin: 0 0 30px; }
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+  .card {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 20px;
+  }
+  .card .ico { width: 34px; height: 34px; border-radius: 9px; background: color-mix(in srgb, var(--accent) 18%, transparent); margin-bottom: 12px; }
+  .card h3 { font-size: 15.5px; margin: 0 0 6px; }
+  .card p { font-size: 13.5px; color: var(--muted); margin: 0; line-height: 1.5; }
+
+  section.deploys { padding: 0 0 60px; }
+  .deploys h2 { font-size: 22px; margin: 0 0 10px; letter-spacing: -0.01em; }
+  .deploys p.lead { color: var(--muted); font-size: 14.5px; margin: 0 0 18px; max-width: 620px; }
+
+  section.pricing { padding: 0 0 64px; }
+  .pricing h2 { font-size: 22px; margin: 0 0 6px; letter-spacing: -0.01em; }
+  .pricing p.lead { color: var(--muted); font-size: 14.5px; margin: 0 0 18px; }
+  .plan { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; max-width: 320px; }
+  .plan .price { font-size: 28px; font-weight: 800; letter-spacing: -0.02em; }
+  .plan .price small { font-size: 13px; color: var(--muted); font-weight: 500; }
+
+  section.finalcta {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 14px;
+    padding: 40px 30px; text-align: center; margin-bottom: 60px;
+  }
+  section.finalcta h2 { font-size: 24px; margin: 0 0 10px; letter-spacing: -0.01em; }
+  section.finalcta p { color: var(--muted); margin: 0 0 22px; }
+
+  footer { border-top: 1px solid var(--line); padding: 26px 0 40px; color: var(--muted); font-size: 12.5px; display: flex; justify-content: space-between; }
+  footer a { color: inherit; }
+
+  @media (max-width: 640px) {
+    .grid { grid-template-columns: 1fr; }
+    h1 { font-size: 32px; }
+    nav.top .navlinks { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <nav class="top">
+    <div class="logo"><span class="mark"></span>Waypoint</div>
+    <div class="navlinks">
+      <a href="#features">Features</a>
+      <a href="#deploys">Deploys</a>
+      <a href="#pricing">Pricing</a>
+      <a href="#docs">Docs</a>
+    </div>
+    <button class="navcta">Start free</button>
+  </nav>
+
+  <header class="hero">
+    <span class="kicker">Deploy tracking</span>
+    <h1 id="hero-h1">Ship things. Know what shipped.</h1>
+    <p class="sub" id="hero-sub">Waypoint watches every deploy across every service and tells your team, in plain language, what actually changed — no dashboard archaeology required.</p>
+    <div class="cta-row">
+      <a class="btn primary" href="#">Start free</a>
+      <a class="btn ghost" href="#">Book a demo</a>
+    </div>
+  </header>
+
+  <section class="beta-banner" id="beta-banner">
+    <b>Public beta:</b> Waypoint is free for teams under 10 people through the end of the quarter. Pricing below reflects what happens after that.
+  </section>
+
+  <section class="features" id="features">
+    <h2>What you get</h2>
+    <div class="grid">
+      <div class="card">
+        <div class="ico"></div>
+        <h3>Unified deploy feed</h3>
+        <p>Every service, every environment, one timeline — sorted the way your team actually thinks about a release.</p>
+      </div>
+      <div class="card">
+        <div class="ico"></div>
+        <h3>Plain-language diffs</h3>
+        <p>Waypoint reads the commit range and writes the changelog entry, so nobody has to reconstruct it from memory in an incident channel.</p>
+      </div>
+      <div class="card">
+        <div class="ico"></div>
+        <h3>Rollback in one click</h3>
+        <p>Every deploy card carries the exact command to revert it. No tribal knowledge required.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="deploys" id="deploys">
+    <h2>Built for the moment something breaks</h2>
+    <p class="lead" id="deploys-lead">When a metric moves, the first question is always "what shipped." Waypoint answers it in one glance.</p>
+  </section>
+
+  <section class="pricing" id="pricing">
+    <h2>Pricing</h2>
+    <p class="lead">Simple, per-seat pricing. No usage tiers to negotiate.</p>
+    <div class="plan">
+      <div class="price">$12<small>/seat/mo</small></div>
+      <p style="color:var(--muted);font-size:13.5px;margin:10px 0 0">Unlimited services, unlimited history, email support.</p>
+    </div>
+  </section>
+
+  <section class="finalcta" id="finalcta">
+    <h2>Stop guessing what shipped</h2>
+    <p>Connect your first service in about four minutes.</p>
+    <a class="btn primary" href="#">Start free</a>
+  </section>
+
+  <footer>
+    <span>© 2026 Waypoint Labs</span>
+    <span><a href="#">Privacy</a> · <a href="#">Terms</a> · <a href="#docs">Docs</a></span>
+  </footer>
+
+</div>
+</body>
+</html>

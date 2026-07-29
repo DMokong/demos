@@ -1,0 +1,1577 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>redline</title>
+<style>
+  :root{
+    --bg:#0d0f13; --panel:#151920; --panel-2:#1c2129; --line:#272d38;
+    --ink:#e8ecf3; --muted:#9aa4b5; --dim:#6f7a8c;
+    --accent:#ff4d4f; --ok:#22c55e;
+    --instruct:#3b82f6; --question:#a855f7; --factcheck:#f59e0b; --expand:#22c55e; --delete:#ef4444;
+    --ui: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font:14px/1.45 var(--ui); overflow:hidden;
+    display:flex; flex-direction:column; height:100vh;
+    -webkit-font-smoothing:antialiased;
+  }
+  button,select,input,textarea{font:inherit; color:inherit}
+  button{cursor:pointer}
+
+  /* ---------- toolbar ---------- */
+  #bar{
+    display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+    padding:8px 12px; background:var(--panel); border-bottom:1px solid var(--line);
+    position:relative; z-index:40;
+  }
+  .brand{
+    display:flex; align-items:baseline; gap:7px; font-weight:700; letter-spacing:-.02em; font-size:17px;
+    padding-right:4px;
+  }
+  .brand .dot{width:9px;height:9px;border-radius:50%;background:var(--accent);display:inline-block;align-self:center}
+  .brand small{font-weight:500;color:var(--dim);font-size:11px;letter-spacing:.06em;text-transform:uppercase}
+
+  .grp{display:flex; align-items:center; gap:4px; padding:3px; background:var(--panel-2); border:1px solid var(--line); border-radius:9px}
+  .grp.hidden{display:none}
+  .sep{width:1px;height:22px;background:var(--line);margin:0 2px}
+
+  .btn{
+    background:transparent; border:1px solid transparent; color:var(--muted);
+    padding:5px 10px; border-radius:6px; font-size:13px; font-weight:500; white-space:nowrap;
+    display:inline-flex; align-items:center; gap:6px;
+  }
+  .btn:hover{background:#232a34; color:var(--ink)}
+  .btn.on{background:#323b49; color:#fff; box-shadow:inset 0 0 0 1px #46526413}
+  .btn kbd{font:11px/1 var(--mono); color:var(--dim); background:#0e1218; border:1px solid var(--line); border-radius:3px; padding:2px 4px}
+  .btn.on kbd{color:#c3ccdb}
+  .btn.primary{background:var(--accent); color:#fff; font-weight:600; border-color:#ff6b6d}
+  .btn.primary:hover{background:#ff6567}
+  .btn.ghost{border-color:var(--line)}
+  .btn:disabled{opacity:.45; cursor:not-allowed}
+
+  .swatch{width:22px;height:22px;border-radius:6px;border:2px solid transparent;padding:0}
+  .swatch.on{border-color:#fff; box-shadow:0 0 0 2px #ffffff33}
+
+  .chip{
+    font:12px/1 var(--mono); color:var(--muted); background:var(--panel-2);
+    border:1px solid var(--line); border-radius:999px; padding:6px 11px; white-space:nowrap;
+  }
+  .chip b{color:var(--ink); font-weight:600}
+  .chip.warn{color:#f59e0b; border-color:#5a4413}
+  .spacer{flex:1}
+
+  select.mini{
+    background:var(--panel-2); border:1px solid var(--line); border-radius:6px;
+    padding:5px 7px; font-size:12.5px; color:var(--muted);
+  }
+
+  .legend{display:flex; gap:3px; align-items:center; padding:2px 4px}
+  .lg{display:inline-flex; align-items:center; gap:5px; font-size:11.5px; color:var(--muted); padding:3px 6px; border-radius:5px}
+  .lg i{width:9px;height:9px;border-radius:2px;display:inline-block}
+
+  /* ---------- stage ---------- */
+  #bar{flex:none}
+  #main{flex:1; min-height:0; display:flex; flex-direction:column}
+  #stageWrap{flex:1; overflow:auto; background:#0a0c10; padding:18px 16px 60px; position:relative}
+  #sizer{margin:0 auto; position:relative}
+  #stage{transform-origin:top left; position:relative; background:#fff; box-shadow:0 12px 48px #0009}
+  body:not([data-loaded]) #sizer{display:none}
+  #page{border:0; display:block; background:#fff; position:absolute; left:0; top:0}
+  #overlay{position:absolute; left:0; top:0; z-index:10}
+  #gutter{position:absolute; top:0; z-index:20; background:#f4f5f7; border-left:1px solid #d7dae0}
+  body[data-mode="draw"] #overlay{pointer-events:auto; cursor:crosshair}
+  body[data-mode="highlight"] #overlay{pointer-events:none}
+  body[data-mode="highlight"] #page{cursor:text}
+
+  /* ---------- comment cards (light, they live on the page) ---------- */
+  .card{
+    position:absolute; left:10px; width:calc(100% - 20px);
+    background:#fff; border:1px solid #dfe3e8; border-radius:9px;
+    box-shadow:0 1px 3px #0000001a; padding:8px 10px 9px 12px;
+    color:#16181d; font:13px/1.4 var(--ui); transition:top .12s ease;
+    border-left:4px solid var(--instruct);
+  }
+  .card.sel{box-shadow:0 0 0 2px #00000018, 0 4px 14px #00000022}
+  .chead{display:flex; align-items:center; gap:6px; margin-bottom:5px}
+  .num{
+    width:19px;height:19px;border-radius:50%; background:var(--instruct); color:#fff;
+    font:11px/19px var(--mono); text-align:center; font-weight:700; flex:none;
+  }
+  .card select{
+    border:1px solid #dfe3e8; background:#f7f8fa; border-radius:5px;
+    color:#414957; font-size:11.5px; padding:2px 4px; flex:1; min-width:0;
+  }
+  .card .del{
+    border:0; background:transparent; color:#98a0ad; font-size:16px; line-height:1;
+    padding:0 2px; border-radius:4px; flex:none;
+  }
+  .card .del:hover{background:#f1f2f4; color:#b3261e}
+  .card textarea{
+    width:100%; border:1px solid #e6e9ee; border-radius:6px; background:#fff;
+    padding:5px 6px; font:13px/1.4 var(--ui); color:#16181d; resize:none; min-height:34px;
+    overflow:hidden;
+  }
+  .card textarea:focus{outline:2px solid #3b82f6aa; outline-offset:-1px; border-color:transparent}
+  .card .quote{
+    font-size:11.5px; color:#6b7280; margin:0 0 5px; padding-left:6px;
+    border-left:2px solid #e3e6eb; max-height:32px; overflow:hidden;
+  }
+
+  /* ---------- modal ---------- */
+  .scrim{position:fixed; inset:0; background:#05070ad9; z-index:100; display:none; align-items:flex-start; justify-content:center; padding:56px 20px; overflow:auto}
+  .scrim.open{display:flex}
+  .modal{
+    width:min(760px,100%); background:var(--panel); border:1px solid var(--line);
+    border-radius:14px; box-shadow:0 24px 80px #000c; overflow:hidden;
+  }
+  .modal h2{margin:0; font-size:15px; font-weight:600}
+  .mhead{display:flex; align-items:center; gap:10px; padding:14px 16px; border-bottom:1px solid var(--line)}
+  .mbody{padding:16px; max-height:min(62vh,620px); overflow:auto}
+  .mrow{display:flex; gap:8px; margin-bottom:12px}
+  .mrow input[type=text]{
+    flex:1; background:#0d1015; border:1px solid var(--line); border-radius:8px;
+    padding:10px 12px; font:13px/1.3 var(--mono); color:var(--ink);
+  }
+  .mrow input:focus{outline:2px solid #3b82f6aa; outline-offset:-1px}
+  .hint{color:var(--dim); font-size:12px; margin:0 0 16px}
+  .sesh{border:1px solid var(--line); border-radius:10px; margin-bottom:10px; overflow:hidden}
+  .sesh > .sh{display:flex; align-items:center; gap:8px; padding:9px 12px; background:var(--panel-2); border-bottom:1px solid var(--line)}
+  .sesh .sid{font:12px/1 var(--mono); color:var(--muted)}
+  .sesh .stitle{font-size:12.5px; color:var(--ink); font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .rnd{display:flex; align-items:center; gap:8px; padding:8px 12px; border-top:1px solid #ffffff08}
+  .rnd:first-child{border-top:0}
+  .rnd .rn{font:12px/1 var(--mono); color:var(--ink); width:66px; flex:none}
+  .tag{font:10.5px/1 var(--mono); border-radius:999px; padding:4px 7px; border:1px solid var(--line); color:var(--dim)}
+  .tag.done{color:#7ee2a8; border-color:#1d4c33}
+  .tag.pend{color:#f0b429; border-color:#5a4413}
+  .empty{color:var(--dim); font-size:13px; text-align:center; padding:22px 0}
+
+  pre.prompt{
+    margin:12px 0 0; background:#0d1015; border:1px solid var(--line); border-radius:9px;
+    padding:12px 13px; font:12.5px/1.55 var(--mono); color:#cfe0ff; white-space:pre-wrap; word-break:break-word;
+  }
+  .path{font:14px/1.4 var(--mono); color:#7ee2a8; word-break:break-all}
+
+  /* ---------- misc ---------- */
+  #toast{
+    position:fixed; left:50%; bottom:26px; transform:translateX(-50%) translateY(16px);
+    background:#232a34; border:1px solid var(--line); color:var(--ink);
+    padding:10px 16px; border-radius:9px; font-size:13px; z-index:200;
+    opacity:0; pointer-events:none; transition:all .18s ease; box-shadow:0 8px 30px #0008; max-width:70vw;
+  }
+  #toast.show{opacity:1; transform:translateX(-50%) translateY(0)}
+  #toast.bad{border-color:#7f1d1d; background:#2a1416}
+  #busy{
+    position:fixed; inset:0; background:#05070ac9; z-index:150; display:none;
+    align-items:center; justify-content:center; flex-direction:column; gap:14px;
+  }
+  #busy.open{display:flex}
+  .spin{width:34px;height:34px;border:3px solid #2c3340;border-top-color:var(--accent);border-radius:50%;animation:sp .8s linear infinite}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  #busyLabel{color:var(--muted); font-size:13px}
+  #noteBox{
+    position:fixed; z-index:120; display:none; background:var(--panel); border:1px solid var(--line);
+    border-radius:9px; padding:8px; box-shadow:0 10px 34px #000a; width:280px;
+  }
+  #noteBox.open{display:block}
+  #noteBox input{width:100%; background:#0d1015; border:1px solid var(--line); border-radius:6px; padding:7px 9px; color:var(--ink); font-size:13px}
+  #noteBox .nb-hint{color:var(--dim); font-size:11px; margin-top:5px}
+  .kbdlist{display:grid; grid-template-columns:auto 1fr; gap:6px 14px; font-size:12.5px; color:var(--muted)}
+  .kbdlist code{font:11.5px/1.6 var(--mono); background:#0d1015; border:1px solid var(--line); border-radius:4px; padding:2px 6px; color:#cfe0ff}
+</style>
+</head>
+<body data-mode="highlight">
+
+<header id="bar">
+  <div class="brand"><span class="dot"></span>redline<small id="brandSub">co-authoring loop</small></div>
+
+  <div class="grp">
+    <button class="btn" id="mHighlight" data-mode="highlight">Highlight <kbd>1</kbd></button>
+    <button class="btn" id="mDraw" data-mode="draw">Draw <kbd>2</kbd></button>
+  </div>
+
+  <div class="grp hidden" id="drawTools">
+    <button class="btn tool" data-tool="pen">Pen <kbd>p</kbd></button>
+    <button class="btn tool" data-tool="rect">Box <kbd>r</kbd></button>
+    <button class="btn tool" data-tool="arrow">Arrow <kbd>a</kbd></button>
+    <button class="btn tool" data-tool="note">Note <kbd>n</kbd></button>
+    <span class="sep"></span>
+    <span id="swatches"></span>
+    <span class="sep"></span>
+    <select class="mini" id="strokeW" title="stroke width">
+      <option value="2">thin</option><option value="4" selected>medium</option><option value="7">thick</option>
+    </select>
+  </div>
+
+  <div class="grp legend hidden" id="hlTools" title="select text in the page to comment on it"></div>
+
+  <div class="spacer"></div>
+
+  <span class="chip" id="counts">0 marks</span>
+  <span class="chip" id="ident">no page</span>
+  <span class="chip" id="pngChip" title="html2canvas (CDN) status">png …</span>
+
+  <div class="grp">
+    <select class="mini" id="pageWidth" title="render width">
+      <option value="860" selected>860px</option>
+      <option value="1100">1100px</option>
+      <option value="390">390px</option>
+    </select>
+    <button class="btn" id="zoomOut" title="zoom out">−</button>
+    <button class="btn" id="zoomFit" title="fit to window">fit</button>
+    <button class="btn" id="zoomIn" title="zoom in">+</button>
+  </div>
+
+  <button class="btn ghost" id="undoBtn" title="undo last mark">Undo <kbd>⌘Z</kbd></button>
+  <button class="btn ghost" id="clearBtn" title="clear marks in this mode">Clear</button>
+  <button class="btn ghost" id="helpBtn" title="shortcuts">?</button>
+  <button class="btn ghost" id="openBtn">Open…</button>
+  <button class="btn primary" id="exportBtn">Export round <kbd>⌘E</kbd></button>
+</header>
+
+<div id="main">
+  <div id="stageWrap">
+    <div id="sizer">
+      <div id="stage">
+        <iframe id="page" sandbox="allow-same-origin" scrolling="no" title="snapshot"></iframe>
+        <canvas id="overlay"></canvas>
+        <div id="gutter"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- open panel -->
+<div class="scrim" id="openScrim">
+  <div class="modal">
+    <div class="mhead">
+      <h2>Open something to annotate</h2>
+      <div class="spacer"></div>
+      <button class="btn" id="openClose">Close</button>
+    </div>
+    <div class="mbody">
+      <div class="mrow">
+        <input type="text" id="openInput" placeholder="https://example.com   ·   ./sample/article.html   ·   inbox/&lt;session&gt;/round-1/result.html" spellcheck="false">
+        <button class="btn primary" id="openGo">Open</button>
+      </div>
+      <p class="hint">A URL, a local file, or a previous round's <code>result.html</code>. Opening a result continues that session — the next packet is the next round.
+        <button class="btn ghost" id="sampleBtn" style="margin-left:6px">Use the sample draft article</button>
+      </p>
+      <h2 style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);margin:0 0 8px">Inbox <span id="inboxRoot" style="text-transform:none;letter-spacing:0"></span></h2>
+      <div id="inboxList"><div class="empty">loading…</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- export result panel -->
+<div class="scrim" id="doneScrim">
+  <div class="modal">
+    <div class="mhead"><h2>Round exported</h2><div class="spacer"></div><button class="btn" id="doneClose">Close</button></div>
+    <div class="mbody">
+      <div class="path" id="donePath"></div>
+      <div class="hint" id="doneMeta" style="margin-top:8px"></div>
+      <div id="doneNotes"></div>
+      <h2 style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);margin:18px 0 0">Your turn is over. Hand it to the agent:</h2>
+      <pre class="prompt" id="donePrompt"></pre>
+      <div style="display:flex;gap:8px;margin-top:12px">
+        <button class="btn ghost" id="copyPrompt">Copy prompt</button>
+        <button class="btn ghost" id="openAfter">Open another page</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- help -->
+<div class="scrim" id="helpScrim">
+  <div class="modal">
+    <div class="mhead"><h2>Shortcuts</h2><div class="spacer"></div><button class="btn" id="helpClose">Close</button></div>
+    <div class="mbody">
+      <div class="kbdlist">
+        <code>1</code><span>highlight mode — select text in the page to comment on it</span>
+        <code>2</code><span>draw mode — whiteboard over the page</span>
+        <code>p r a n</code><span>pen · box · arrow · note (note attaches to the last shape)</span>
+        <code>[ ]</code><span>stroke width</span>
+        <code>⌘Z / Ctrl+Z</code><span>undo the last mark in the current mode</span>
+        <code>⌘E / Ctrl+E</code><span>export the round</span>
+        <code>Esc</code><span>close a panel / cancel a drag</span>
+      </div>
+      <p class="hint" style="margin-top:16px">Draw semantics the skill understands: a <b>box</b> is scope, an <b>arrow</b> is movement (tail → head), a <b>circle</b> is the subject, and a <b>note</b> overrides any guess.</p>
+    </div>
+  </div>
+</div>
+
+<div id="busy"><div class="spin"></div><div id="busyLabel">working…</div></div>
+<div id="noteBox"><input type="text" id="noteInput" placeholder="note…" spellcheck="false"><div class="nb-hint">Enter to attach · Esc to cancel</div></div>
+<div id="toast"></div>
+
+<script>
+"use strict";
+/* =========================================================================
+   redline frontend.
+   One page, no framework. The page being reviewed lives in a same-origin
+   iframe and is never modified: every mark is drawn on a canvas above it,
+   which is what makes the exported anchors trustworthy against snapshot.html.
+   ========================================================================= */
+
+const H2C_URL = "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js";
+const SCHEMA_VERSION = "1.0";
+
+const INTENTS = [
+  {id:"instruct",   color:"#3b82f6", hint:"apply this change"},
+  {id:"question",   color:"#a855f7", hint:"answer it, do not edit"},
+  {id:"fact-check", color:"#f59e0b", hint:"verify; propose, never silently fix"},
+  {id:"expand",     color:"#22c55e", hint:"grow this in my voice"},
+  {id:"delete",     color:"#ef4444", hint:"remove this"},
+];
+const INTENT_COLOR = Object.fromEntries(INTENTS.map(i => [i.id, i.color]));
+const DRAW_COLORS = ["#ef4444","#f59e0b","#3b82f6","#22c55e"];
+
+const S = {
+  snap: null,               // snapshot metadata from the server
+  doc: null,                // iframe document (frozen; never mutated)
+  mode: "highlight",
+  tool: "pen",
+  color: DRAW_COLORS[0],
+  strokeWidth: 4,
+  pageW: 860,
+  gutterW: 320,
+  docH: 600,
+  stageH: 600,
+  zoom: 1,
+  draw: [],
+  highlights: [],
+  dseq: 0,
+  hseq: 0,
+  drag: null,
+  textIndex: null,
+  hover: null,
+  h2c: null,                // Promise<boolean>
+  selected: null,
+};
+
+const $  = s => document.querySelector(s);
+const $$ = s => Array.from(document.querySelectorAll(s));
+const raf = () => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
+const esc = s => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+/* ---------------------------------------------------------------- toast */
+let toastTimer = null;
+function toast(msg, bad){
+  const t = $("#toast");
+  t.textContent = msg;
+  t.classList.toggle("bad", !!bad);
+  t.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove("show"), bad ? 5200 : 2600);
+}
+function busy(on, label){
+  $("#busyLabel").textContent = label || "working…";
+  $("#busy").classList.toggle("open", !!on);
+}
+
+/* =========================================================================
+   1. Boot: load a snapshot, mount it, measure it.
+   ========================================================================= */
+async function boot(){
+  buildSwatches();
+  buildLegend();
+  wireToolbar();
+  wireModals();
+  wireCanvas();
+  wireKeys();
+  S.h2c = loadHtml2Canvas();
+  S.h2c.then(ok => {
+    const c = $("#pngChip");
+    c.textContent = ok ? "png ready" : "png offline";
+    c.classList.toggle("warn", !ok);
+    c.title = ok ? "html2canvas loaded — annotated.png will be written"
+                 : "html2canvas (CDN) unavailable — the packet will still be written, without annotated.png";
+  });
+
+  const m = location.pathname.match(/^\/view\/([^/]+)$/);
+  if (m) {
+    try { await loadSnapshot(m[1]); }
+    catch (err) { toast("could not load snapshot: " + err.message, true); openPanel(true); }
+  } else {
+    openPanel(true);
+  }
+}
+
+function loadHtml2Canvas(){
+  return new Promise(resolve => {
+    if (window.html2canvas) return resolve(true);
+    const s = document.createElement("script");
+    s.src = H2C_URL;
+    s.crossOrigin = "anonymous";
+    s.referrerPolicy = "no-referrer";
+    let settled = false;
+    const done = ok => { if (!settled) { settled = true; resolve(ok && !!window.html2canvas); } };
+    s.onload = () => done(true);
+    s.onerror = () => done(false);
+    document.head.appendChild(s);
+    setTimeout(() => done(false), 9000);
+  });
+}
+
+async function loadSnapshot(id){
+  const r = await fetch("/snapshot/" + encodeURIComponent(id), {cache:"no-store"});
+  if (!r.ok) throw new Error((await r.json().catch(()=>({}))).error || ("HTTP " + r.status));
+  const snap = await r.json();
+  S.snap = snap;
+  S.draw = []; S.highlights = []; S.dseq = 0; S.hseq = 0;
+  document.title = "redline · " + (snap.source && snap.source.title ? snap.source.title : "round " + snap.round);
+  updateIdent();
+  document.body.dataset.loaded = "1";   // the stage stays hidden until there is something in it
+  await mountDoc(snap.html);
+  closePanel();
+  if (snap.continues_session) {
+    toast("round " + snap.round + " of " + snap.session_id + " — continuing the session");
+  }
+}
+
+function mountDoc(html){
+  return new Promise(resolve => {
+    const f = $("#page");
+    f.style.width = S.pageW + "px";
+    f.style.height = "700px";
+    f.onload = async () => {
+      try { await afterMount(); } catch (err) { console.error(err); toast("layout problem: " + err.message, true); }
+      resolve();
+    };
+    f.srcdoc = html;
+  });
+}
+
+async function afterMount(){
+  const f = $("#page");
+  const d = f.contentDocument;
+  S.doc = d;
+  // The snapshot is frozen furniture: block navigation, allow selection.
+  d.addEventListener("click", e => {
+    const a = e.target && e.target.closest ? e.target.closest("a") : null;
+    if (a) e.preventDefault();
+  }, true);
+  d.addEventListener("mouseup", () => setTimeout(onSelection, 0));
+  // Hovering a highlight lights up its comment card, and vice versa.
+  d.addEventListener("mousemove", e => {
+    if (S.mode !== "highlight") return;
+    const w = $("#page").contentWindow;
+    const hit = hitHighlight(e.clientX + (w ? w.scrollX : 0), e.clientY + (w ? w.scrollY : 0));
+    setHover(hit ? hit.id : null);
+  });
+  d.addEventListener("mouseleave", () => setHover(null));
+  d.addEventListener("keyup", e => { if (e.key === "Escape") d.getSelection().removeAllRanges(); });
+
+  // A stuck webfont must never be able to block the layout pass.
+  if (d.fonts && d.fonts.ready){
+    try { await Promise.race([d.fonts.ready, new Promise(r => setTimeout(r, 2500))]); } catch(_){}
+  }
+  await measureDoc();
+  buildTextIndex();
+  fitZoom();
+  sizeStage();
+}
+
+async function measureDoc(){
+  const f = $("#page"), d = S.doc;
+  f.style.width = S.pageW + "px";
+  for (let i = 0; i < 4; i++){
+    const h = Math.max(
+      d.documentElement ? d.documentElement.scrollHeight : 0,
+      d.body ? d.body.scrollHeight : 0, 200);
+    f.style.height = h + "px";
+    await raf();
+    const h2 = Math.max(
+      d.documentElement ? d.documentElement.scrollHeight : 0,
+      d.body ? d.body.scrollHeight : 0, 200);
+    S.docH = h2;
+    if (Math.abs(h2 - h) < 2) break;
+  }
+  $("#page").style.height = S.docH + "px";
+}
+
+/* =========================================================================
+   2. Text index + robust anchors.
+   Offsets are into textContent, so the agent can reproduce them with
+   nothing but a DOM parser: el.textContent.slice(start, end) === quoted_text.
+   ========================================================================= */
+function buildTextIndex(){
+  const d = S.doc;
+  if (!d || !d.body) { S.textIndex = null; return; }
+  const walker = d.createTreeWalker(d.body, NodeFilter.SHOW_TEXT, null);
+  const nodes = [];
+  let text = "", n;
+  while ((n = walker.nextNode())){
+    nodes.push({node:n, start:text.length, end:text.length + n.data.length});
+    text += n.data;
+  }
+  S.textIndex = {text, nodes};
+}
+
+function globalPos(container, offset){
+  const idx = S.textIndex;
+  if (!idx) return null;
+  if (container.nodeType === Node.TEXT_NODE){
+    const e = idx.nodes.find(x => x.node === container);
+    return e ? e.start + offset : null;
+  }
+  const child = container.childNodes[offset];
+  if (child){
+    const e = idx.nodes.find(x =>
+      x.node === child ||
+      child.contains(x.node) ||
+      (child.compareDocumentPosition(x.node) & Node.DOCUMENT_POSITION_FOLLOWING));
+    if (e) return e.start;
+  }
+  const inside = idx.nodes.filter(x => container.contains(x.node));
+  if (inside.length) return inside[inside.length - 1].end;
+  return null;
+}
+
+function elementTextStart(el){
+  const idx = S.textIndex;
+  if (!idx) return null;
+  const e = idx.nodes.find(x => el.contains(x.node));
+  return e ? e.start : null;
+}
+
+function cssEscape(s){
+  return window.CSS && CSS.escape ? CSS.escape(s) : String(s).replace(/([^\w-])/g, "\\$1");
+}
+
+function cssPath(el){
+  const d = S.doc, parts = [];
+  while (el && el.nodeType === 1 && el !== d.documentElement){
+    if (el.id){
+      let unique = false;
+      try { unique = d.querySelectorAll("#" + cssEscape(el.id)).length === 1; } catch(_){}
+      if (unique){ parts.unshift("#" + cssEscape(el.id)); return parts.join(" > "); }
+    }
+    const tag = el.tagName.toLowerCase();
+    const parent = el.parentElement;
+    if (!parent){ parts.unshift(tag); break; }
+    const sibs = Array.from(parent.children).filter(c => c.tagName === el.tagName);
+    parts.unshift(sibs.length > 1 ? tag + ":nth-of-type(" + (sibs.indexOf(el) + 1) + ")" : tag);
+    el = parent;
+  }
+  return parts.join(" > ");
+}
+
+const CONTEXT = 32;
+
+function makeAnchor(range){
+  if (!S.textIndex) buildTextIndex();
+  const idx = S.textIndex;
+  const gs = globalPos(range.startContainer, range.startOffset);
+  const ge = globalPos(range.endContainer, range.endOffset);
+  if (gs === null || ge === null || ge <= gs) return null;
+
+  let el = range.commonAncestorContainer;
+  if (el.nodeType !== 1) el = el.parentElement;
+  if (!el) return null;
+
+  // The container must reproduce the quoted text from its own textContent.
+  let elStart = elementTextStart(el);
+  if (elStart === null || idx.text.substr(elStart, el.textContent.length) !== el.textContent){
+    el = S.doc.body;
+    elStart = 0;
+  }
+  const containerText = el.textContent;
+  const startOffset = gs - elStart;
+  const endOffset = ge - elStart;
+  const quoted = containerText.slice(startOffset, endOffset);
+  if (!quoted.trim()) return null;
+
+  return {
+    selector: cssPath(el),
+    container_tag: el.tagName.toLowerCase(),
+    container_text_length: containerText.length,
+    start_offset: startOffset,
+    end_offset: endOffset,
+    quoted_text: quoted,
+    prefix: idx.text.slice(Math.max(0, gs - CONTEXT), gs),
+    suffix: idx.text.slice(ge, ge + CONTEXT),
+    document_start_offset: gs,
+    document_end_offset: ge,
+  };
+}
+
+function rangeInElement(el, start, end){
+  const d = S.doc;
+  const walker = d.createTreeWalker(el, NodeFilter.SHOW_TEXT, null);
+  const r = d.createRange();
+  let pos = 0, started = false, n, last = null;
+  while ((n = walker.nextNode())){
+    const len = n.data.length;
+    last = {node:n, len};
+    if (!started && start < pos + len){ r.setStart(n, start - pos); started = true; }
+    if (started && end <= pos + len){ r.setEnd(n, end - pos); return r; }
+    pos += len;
+  }
+  if (!last) return null;
+  if (!started) r.setStart(last.node, last.len);
+  r.setEnd(last.node, last.len);
+  return r;
+}
+
+function rangeFromGlobal(gs, ge){
+  const idx = S.textIndex;
+  if (!idx) return null;
+  const r = S.doc.createRange();
+  let s = null, e = null;
+  for (const x of idx.nodes){
+    if (s === null && gs < x.end){ r.setStart(x.node, Math.max(0, gs - x.start)); s = true; }
+    if (s !== null && ge <= x.end){ r.setEnd(x.node, Math.max(0, ge - x.start)); e = true; break; }
+  }
+  return (s && e) ? r : null;
+}
+
+function nearestIndexOf(hay, needle, near){
+  let best = -1, bestD = Infinity, i = hay.indexOf(needle);
+  while (i >= 0){
+    const d = Math.abs(i - near);
+    if (d < bestD){ bestD = d; best = i; }
+    i = hay.indexOf(needle, i + 1);
+  }
+  return best;
+}
+
+/* Resolution order mirrors SKILL.md exactly: selector+offsets, then
+   prefix+quote+suffix, then the quote nearest its recorded position. */
+function resolveAnchor(a){
+  if (!S.doc) return null;
+  let el = null;
+  try { el = S.doc.querySelector(a.selector); } catch(_){}
+  if (el && el.textContent.slice(a.start_offset, a.end_offset) === a.quoted_text){
+    return rangeInElement(el, a.start_offset, a.end_offset);
+  }
+  buildTextIndex();
+  const T = S.textIndex ? S.textIndex.text : "";
+  let i = -1;
+  if (a.prefix || a.suffix){
+    const j = T.indexOf((a.prefix||"") + a.quoted_text + (a.suffix||""));
+    if (j >= 0) i = j + (a.prefix||"").length;
+  }
+  if (i < 0) i = nearestIndexOf(T, a.quoted_text, a.document_start_offset || 0);
+  if (i < 0) return null;
+  return rangeFromGlobal(i, i + a.quoted_text.length);
+}
+
+function rectsForRange(range){
+  const win = $("#page").contentWindow;
+  const sx = win ? win.scrollX : 0, sy = win ? win.scrollY : 0;
+  return Array.from(range.getClientRects())
+    .filter(r => r.width > 0.5 && r.height > 0.5)
+    .map(r => ({
+      x: Math.round(r.left + sx), y: Math.round(r.top + sy),
+      w: Math.round(r.width), h: Math.round(r.height)
+    }));
+}
+
+/* =========================================================================
+   3. Highlight mode
+   ========================================================================= */
+function onSelection(){
+  if (S.mode !== "highlight" || !S.doc) return;
+  const sel = S.doc.getSelection();
+  if (!sel || sel.isCollapsed || sel.rangeCount === 0) return;
+  const range = sel.getRangeAt(0);
+  if (range.collapsed) return;
+  const anchor = makeAnchor(range);
+  if (!anchor){ toast("could not anchor that selection — try selecting inside a paragraph", true); return; }
+  const rects = rectsForRange(range);
+  sel.removeAllRanges();
+  addHighlight(anchor, rects);
+}
+
+function addHighlight(anchor, rects, intent, comment){
+  const h = {
+    id: "h" + (++S.hseq),
+    _seq: S.hseq,
+    number: S.highlights.length + 1,
+    intent: intent || "instruct",
+    comment: comment || "",
+    anchor,
+    rects: rects || [],
+    created_at: new Date().toISOString(),
+  };
+  S.highlights.push(h);
+  renumber();
+  syncCards();
+  S.selected = h.id;
+  const ta = document.querySelector('.card[data-id="' + h.id + '"] textarea');
+  if (ta){ ta.focus(); }
+  refresh();
+  return h;
+}
+
+/* Comments are kept in document order, so the badges read 1..N down the page
+   and annotations.json arrives at the agent in reading order. */
+function renumber(){
+  S.highlights.sort((a, b) =>
+    (a.anchor.document_start_offset || 0) - (b.anchor.document_start_offset || 0));
+  S.highlights.forEach((h, i) => h.number = i + 1);
+}
+
+function removeHighlight(id){
+  S.highlights = S.highlights.filter(h => h.id !== id);
+  renumber(); syncCards(); refresh();
+}
+
+/* Cards are DOM (so they are editable) and are re-drawn onto the canvas at
+   export time from the very same geometry. */
+function syncCards(){
+  const g = $("#gutter");
+  const seen = new Set();
+  for (const h of S.highlights){
+    seen.add(h.id);
+    let card = g.querySelector('.card[data-id="' + h.id + '"]');
+    if (!card){
+      card = document.createElement("div");
+      card.className = "card";
+      card.dataset.id = h.id;
+      card.innerHTML =
+        '<div class="chead"><span class="num"></span>' +
+        '<select>' + INTENTS.map(i => '<option value="' + i.id + '">' + i.id + '</option>').join("") + '</select>' +
+        '<button class="del" title="delete comment">&times;</button></div>' +
+        '<div class="quote"></div>' +
+        '<textarea rows="1" placeholder="what should change here?"></textarea>';
+      g.appendChild(card);
+      card.querySelector("select").addEventListener("change", e => {
+        h.intent = e.target.value; paintCard(card, h); refresh();
+      });
+      card.querySelector(".del").addEventListener("click", () => removeHighlight(h.id));
+      const ta = card.querySelector("textarea");
+      ta.addEventListener("input", () => { h.comment = ta.value; autosize(ta); layoutCards(); render(); });
+      ta.addEventListener("focus", () => { S.selected = h.id; paintSelection(); });
+      card.addEventListener("mousedown", () => { S.selected = h.id; paintSelection(); });
+      card.addEventListener("mouseenter", () => setHover(h.id));
+      card.addEventListener("mouseleave", () => setHover(null));
+    }
+    paintCard(card, h);
+  }
+  for (const el of Array.from(g.querySelectorAll(".card"))){
+    if (!seen.has(el.dataset.id)) el.remove();
+  }
+}
+
+function paintCard(card, h){
+  const color = INTENT_COLOR[h.intent] || INTENT_COLOR.instruct;
+  card.style.borderLeftColor = color;
+  const num = card.querySelector(".num");
+  num.textContent = h.number;
+  num.style.background = color;
+  const sel = card.querySelector("select");
+  if (sel.value !== h.intent) sel.value = h.intent;
+  const q = card.querySelector(".quote");
+  q.textContent = "“" + truncate(h.anchor.quoted_text.replace(/\s+/g, " ").trim(), 90) + "”";
+  const ta = card.querySelector("textarea");
+  if (ta.value !== h.comment) ta.value = h.comment;
+  autosize(ta);
+}
+
+function paintSelection(){
+  $$(".card").forEach(c =>
+    c.classList.toggle("sel", c.dataset.id === S.selected || c.dataset.id === S.hover));
+}
+
+function hitHighlight(x, y){
+  for (let i = S.highlights.length - 1; i >= 0; i--){
+    const h = S.highlights[i];
+    for (const r of h.rects){
+      if (x >= r.x - 2 && x <= r.x + r.w + 2 && y >= r.y - 2 && y <= r.y + r.h + 2) return h;
+    }
+  }
+  return null;
+}
+
+function setHover(id){
+  if (S.hover === id) return;
+  S.hover = id;
+  paintSelection();
+  render();
+}
+
+function autosize(ta){
+  ta.style.height = "auto";
+  ta.style.height = Math.max(34, ta.scrollHeight) + "px";
+}
+
+function layoutCards(){
+  const g = $("#gutter");
+  let prevBottom = 8;
+  let bottom = 8;
+  const ordered = S.highlights.slice().sort((a, b) => topOf(a) - topOf(b));
+  for (const h of ordered){
+    const card = g.querySelector('.card[data-id="' + h.id + '"]');
+    if (!card) continue;
+    const desired = Math.max(8, topOf(h) - 2);
+    const top = Math.max(desired, prevBottom + 10);
+    card.style.top = top + "px";
+    h._cardTop = top;
+    h._cardH = card.offsetHeight;
+    prevBottom = top + card.offsetHeight;
+    bottom = prevBottom;
+  }
+  const needed = Math.max(S.docH, bottom + 24);
+  if (Math.abs(needed - S.stageH) > 1){
+    S.stageH = needed;
+    applyStageSize();
+  }
+  paintSelection();
+}
+
+function topOf(h){ return (h.rects && h.rects[0]) ? h.rects[0].y : 8; }
+
+/* =========================================================================
+   4. Draw mode
+   ========================================================================= */
+function wireCanvas(){
+  const c = $("#overlay");
+  c.addEventListener("pointerdown", e => {
+    if (S.mode !== "draw" || !S.doc) return;
+    const p = pt(e);
+    if (S.tool === "note"){ openNoteBox(e, p); return; }
+    c.setPointerCapture(e.pointerId);
+    S.drag = {type:S.tool, color:S.color, w:S.strokeWidth, points:[p]};
+    render();
+  });
+  c.addEventListener("pointermove", e => {
+    if (!S.drag) return;
+    const p = pt(e);
+    if (S.drag.type === "pen"){
+      const last = S.drag.points[S.drag.points.length - 1];
+      if (Math.hypot(p.x - last.x, p.y - last.y) > 2) S.drag.points.push(p);
+    } else {
+      S.drag.points[1] = p;
+    }
+    render();
+  });
+  const finish = e => {
+    if (!S.drag) return;
+    const d = S.drag; S.drag = null;
+    if (d.points.length < 2){ render(); return; }
+    if (d.type !== "pen"){
+      const [a, b] = d.points;
+      if (Math.hypot(b.x - a.x, b.y - a.y) < 6){ render(); return; }
+    }
+    commitShape(d);
+  };
+  c.addEventListener("pointerup", finish);
+  c.addEventListener("pointercancel", finish);
+  c.addEventListener("pointerleave", e => { if (S.drag) finish(e); });
+}
+
+function pt(e){
+  const r = $("#overlay").getBoundingClientRect();
+  return {x: Math.round((e.clientX - r.left) / S.zoom), y: Math.round((e.clientY - r.top) / S.zoom)};
+}
+
+function commitShape(d){
+  const obj = {
+    id: "d" + (++S.dseq),
+    type: d.type,
+    color: d.color,
+    stroke_width: d.w,
+    points: d.points.map(p => ({x:Math.round(p.x), y:Math.round(p.y)})),
+    bounds: bboxOf(d.points, d.type),
+    note: "",
+    attached_to: null,
+    created_at: new Date().toISOString(),
+  };
+  S.draw.push(obj);
+  refresh();
+}
+
+function bboxOf(points, type){
+  if (type === "rect" && points.length >= 2){
+    const [a, b] = points;
+    return {x:Math.round(Math.min(a.x,b.x)), y:Math.round(Math.min(a.y,b.y)),
+            w:Math.round(Math.abs(b.x-a.x)), h:Math.round(Math.abs(b.y-a.y))};
+  }
+  const xs = points.map(p => p.x), ys = points.map(p => p.y);
+  return {x:Math.round(Math.min(...xs)), y:Math.round(Math.min(...ys)),
+          w:Math.round(Math.max(...xs) - Math.min(...xs)), h:Math.round(Math.max(...ys) - Math.min(...ys))};
+}
+
+function openNoteBox(e, p){
+  const box = $("#noteBox"), input = $("#noteInput");
+  box.style.left = clamp(e.clientX, 10, window.innerWidth - 300) + "px";
+  box.style.top = clamp(e.clientY + 12, 10, window.innerHeight - 110) + "px";
+  box.classList.add("open");
+  input.value = "";
+  input.focus();
+  const close = () => { box.classList.remove("open"); input.onkeydown = null; };
+  input.onkeydown = ev => {
+    if (ev.key === "Enter"){
+      const text = input.value.trim();
+      close();
+      if (text) addNote(p, text);
+    } else if (ev.key === "Escape"){ close(); }
+    ev.stopPropagation();
+  };
+}
+
+function addNote(p, text){
+  const shapes = S.draw.filter(d => d.type !== "note");
+  const parent = shapes.length ? shapes[shapes.length - 1] : null;
+  const obj = {
+    id: "d" + (++S.dseq),
+    type: "note",
+    color: S.color,
+    stroke_width: S.strokeWidth,
+    points: [{x:Math.round(p.x), y:Math.round(p.y)}],
+    bounds: {x:Math.round(p.x), y:Math.round(p.y), w:NOTE_W, h:0},
+    note: text,
+    attached_to: parent ? parent.id : null,
+    created_at: new Date().toISOString(),
+  };
+  if (parent) parent.note = text;   // mirrored so the shape is self-describing
+  S.draw.push(obj);
+  refresh();
+}
+
+/* =========================================================================
+   5. Canvas rendering (what you see is exactly what annotated.png gets)
+   ========================================================================= */
+const NOTE_W = 210;
+
+function render(){
+  const c = $("#overlay");
+  if (!c) return;
+  const W = S.pageW + S.gutterW, H = S.stageH;
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  const bw = Math.round(W * dpr), bh = Math.round(H * dpr);
+  if (c.width !== bw || c.height !== bh){ c.width = bw; c.height = bh; }
+  c.style.width = W + "px"; c.style.height = H + "px";
+  const ctx = c.getContext("2d");
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, W, H);
+  drawHighlightLayer(ctx);
+  drawConnectors(ctx);
+  for (const d of S.draw) drawShape(ctx, d);
+  if (S.drag) drawShape(ctx, {...S.drag, stroke_width:S.drag.w, note:""}, true);
+}
+
+function hexA(hex, a){
+  const n = parseInt(hex.slice(1), 16);
+  return "rgba(" + ((n>>16)&255) + "," + ((n>>8)&255) + "," + (n&255) + "," + a + ")";
+}
+
+function drawHighlightLayer(ctx){
+  for (const h of S.highlights){
+    const color = INTENT_COLOR[h.intent] || INTENT_COLOR.instruct;
+    const strong = S.selected === h.id || S.hover === h.id;
+    for (const r of h.rects){
+      ctx.fillStyle = hexA(color, strong ? 0.34 : 0.22);
+      ctx.fillRect(r.x, r.y, r.w, r.h);
+      ctx.fillStyle = hexA(color, 0.85);
+      ctx.fillRect(r.x, r.y + r.h - 2, r.w, 2);
+    }
+    const last = h.rects[h.rects.length - 1];
+    if (last){
+      const bx = Math.min(last.x + last.w + 11, S.pageW - 12);
+      const by = last.y + last.h / 2;
+      ctx.beginPath(); ctx.arc(bx, by, 9, 0, Math.PI * 2);
+      ctx.fillStyle = color; ctx.fill();
+      ctx.fillStyle = "#fff";
+      ctx.font = "700 11px ui-monospace, Menlo, monospace";
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillText(String(h.number), bx, by + 0.5);
+      ctx.textAlign = "start"; ctx.textBaseline = "alphabetic";
+    }
+  }
+}
+
+function drawConnectors(ctx){
+  for (const h of S.highlights){
+    const last = h.rects[h.rects.length - 1];
+    if (!last || h._cardTop == null) continue;
+    const color = INTENT_COLOR[h.intent] || INTENT_COLOR.instruct;
+    ctx.save();
+    ctx.strokeStyle = hexA(color, 0.5);
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([4, 3]);
+    ctx.beginPath();
+    ctx.moveTo(Math.min(last.x + last.w + 22, S.pageW - 2), last.y + last.h / 2);
+    ctx.lineTo(S.pageW + 10, h._cardTop + 16);
+    ctx.stroke();
+    ctx.restore();
+  }
+}
+
+function drawShape(ctx, d, live){
+  ctx.save();
+  ctx.strokeStyle = d.color;
+  ctx.fillStyle = d.color;
+  ctx.lineWidth = d.stroke_width || 4;
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  ctx.globalAlpha = live ? 0.85 : 1;
+  const p = d.points || [];
+  if (d.type === "pen" && p.length > 1){
+    ctx.beginPath();
+    ctx.moveTo(p[0].x, p[0].y);
+    for (let i = 1; i < p.length - 1; i++){
+      const mx = (p[i].x + p[i+1].x) / 2, my = (p[i].y + p[i+1].y) / 2;
+      ctx.quadraticCurveTo(p[i].x, p[i].y, mx, my);
+    }
+    ctx.lineTo(p[p.length-1].x, p[p.length-1].y);
+    ctx.stroke();
+  } else if (d.type === "rect" && p.length > 1){
+    const b = d.bounds || bboxOf(p, "rect");
+    roundRect(ctx, b.x, b.y, b.w, b.h, 6);
+    ctx.stroke();
+  } else if (d.type === "arrow" && p.length > 1){
+    arrow(ctx, p[0], p[1], d.stroke_width || 4);
+  } else if (d.type === "note"){
+    drawNote(ctx, d);
+  }
+  ctx.restore();
+}
+
+function arrow(ctx, a, b, w){
+  const head = Math.max(12, w * 3.4);
+  const ang = Math.atan2(b.y - a.y, b.x - a.x);
+  const tipX = b.x, tipY = b.y;
+  const bx = tipX - Math.cos(ang) * head * 0.72;
+  const by = tipY - Math.sin(ang) * head * 0.72;
+  ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(bx, by); ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(tipX, tipY);
+  ctx.lineTo(tipX - Math.cos(ang - 0.42) * head, tipY - Math.sin(ang - 0.42) * head);
+  ctx.lineTo(tipX - Math.cos(ang + 0.42) * head, tipY - Math.sin(ang + 0.42) * head);
+  ctx.closePath();
+  ctx.fill();
+}
+
+function drawNote(ctx, d){
+  const x = d.points[0].x, y = d.points[0].y;
+  ctx.font = "12.5px ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif";
+  const lines = wrapText(ctx, d.note || "", NOTE_W - 18);
+  const h = 12 + lines.length * 16;
+  d.bounds = {x:Math.round(x), y:Math.round(y), w:NOTE_W, h:Math.round(h)};
+  if (d.attached_to){
+    const parent = S.draw.find(o => o.id === d.attached_to);
+    if (parent && parent.bounds){
+      const px = parent.bounds.x + parent.bounds.w / 2, py = parent.bounds.y + parent.bounds.h / 2;
+      ctx.save();
+      ctx.strokeStyle = hexA(d.color, 0.55); ctx.lineWidth = 1.5; ctx.setLineDash([4, 3]);
+      ctx.beginPath(); ctx.moveTo(x + 8, y + 8); ctx.lineTo(px, py); ctx.stroke();
+      ctx.restore();
+    }
+  }
+  ctx.save();
+  ctx.shadowColor = "#00000026"; ctx.shadowBlur = 8; ctx.shadowOffsetY = 2;
+  ctx.fillStyle = "#fffbe6";
+  roundRect(ctx, x, y, NOTE_W, h, 7); ctx.fill();
+  ctx.restore();
+  ctx.strokeStyle = d.color; ctx.lineWidth = 1.5;
+  roundRect(ctx, x, y, NOTE_W, h, 7); ctx.stroke();
+  ctx.fillStyle = d.color;
+  roundRect(ctx, x, y, 4, h, 2); ctx.fill();
+  ctx.fillStyle = "#16181d";
+  ctx.font = "12.5px ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif";
+  lines.forEach((ln, i) => ctx.fillText(ln, x + 11, y + 20 + i * 16));
+}
+
+function roundRect(ctx, x, y, w, h, r){
+  r = Math.min(r, Math.abs(w) / 2, Math.abs(h) / 2);
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
+function wrapText(ctx, text, maxW){
+  const words = String(text).split(/\s+/).filter(Boolean);
+  const lines = [];
+  let line = "";
+  for (const w of words){
+    const t = line ? line + " " + w : w;
+    if (ctx.measureText(t).width > maxW && line){ lines.push(line); line = w; }
+    else line = t;
+  }
+  if (line) lines.push(line);
+  return lines.length ? lines : [""];
+}
+
+function truncate(s, n){ return s.length > n ? s.slice(0, n - 1) + "…" : s; }
+
+/* Trim to fit a pixel width in the current font — char counts lie. */
+function fitText(ctx, s, maxW){
+  if (ctx.measureText(s).width <= maxW) return s;
+  let lo = 0, hi = s.length;
+  while (lo < hi){
+    const mid = (lo + hi + 1) >> 1;
+    if (ctx.measureText(s.slice(0, mid) + "…").width <= maxW) lo = mid; else hi = mid - 1;
+  }
+  return s.slice(0, lo) + "…";
+}
+
+/* =========================================================================
+   6. Stage sizing / zoom
+   ========================================================================= */
+function applyStageSize(){
+  const W = S.pageW + S.gutterW;
+  $("#stage").style.width = W + "px";
+  $("#stage").style.height = S.stageH + "px";
+  $("#page").style.width = S.pageW + "px";
+  $("#page").style.height = S.docH + "px";
+  const g = $("#gutter");
+  g.style.left = S.pageW + "px";
+  g.style.width = S.gutterW + "px";
+  g.style.height = S.stageH + "px";
+  $("#stage").style.transform = "scale(" + S.zoom + ")";
+  $("#sizer").style.width = Math.round(W * S.zoom) + "px";
+  $("#sizer").style.height = Math.round(S.stageH * S.zoom) + "px";
+}
+
+function sizeStage(){
+  S.stageH = Math.max(S.stageH, S.docH);
+  applyStageSize();
+  layoutCards();
+  render();
+  updateCounts();
+}
+
+function fitZoom(){
+  const avail = $("#stageWrap").clientWidth - 34;
+  S.zoom = clamp(avail / (S.pageW + S.gutterW), 0.3, 1);
+  S.zoom = Math.round(S.zoom * 100) / 100;
+}
+
+function refresh(){
+  S.stageH = S.docH;
+  syncCards();
+  layoutCards();
+  render();
+  updateCounts();
+}
+
+async function setPageWidth(w){
+  if (!S.doc) { S.pageW = w; return; }
+  S.pageW = w;
+  busy(true, "re-flowing at " + w + "px…");
+  await measureDoc();
+  buildTextIndex();
+  // Re-resolve every anchor against the new layout. If this ever fails, the
+  // packet would have been unusable anyway — better to see it now.
+  let lost = 0;
+  for (const h of S.highlights){
+    const r = resolveAnchor(h.anchor);
+    if (r) h.rects = rectsForRange(r); else { h.rects = []; lost++; }
+  }
+  S.stageH = S.docH;
+  fitZoom();
+  sizeStage();
+  busy(false);
+  if (lost) toast(lost + " highlight(s) could not be re-anchored at this width", true);
+}
+
+/* =========================================================================
+   7. Export
+   ========================================================================= */
+function buildAnnotations(){
+  return {
+    schema_version: SCHEMA_VERSION,
+    tool: "redline",
+    created_at: new Date().toISOString(),
+    session_id: S.snap ? S.snap.session_id : "",
+    round: S.snap ? S.snap.round : 1,
+    parent_round: S.snap ? (S.snap.parent_round ?? null) : null,
+    source: S.snap ? S.snap.source : null,
+    viewport: {
+      width: S.pageW,
+      height: S.docH,
+      gutter_width: S.gutterW,
+      device_pixel_ratio: window.devicePixelRatio || 1,
+    },
+    draw: S.draw.map(d => ({
+      id: d.id, type: d.type, color: d.color, stroke_width: d.stroke_width,
+      points: d.points, bounds: d.bounds, note: d.note || "",
+      attached_to: d.attached_to || null, created_at: d.created_at,
+    })),
+    highlights: S.highlights.map(h => ({
+      id: h.id, number: h.number, intent: h.intent, comment: h.comment,
+      anchor: h.anchor, rects: h.rects, created_at: h.created_at,
+    })),
+  };
+}
+
+async function flatten(){
+  const ok = await S.h2c;
+  if (!ok || !window.html2canvas) throw new Error("html2canvas unavailable (CDN blocked or offline)");
+  const W = S.pageW, H = S.docH, SW = S.pageW + S.gutterW, SH = S.stageH;
+  const pageCanvas = await window.html2canvas(S.doc.documentElement, {
+    backgroundColor: "#ffffff",
+    width: W, height: H, windowWidth: W, windowHeight: H,
+    scale: 1, scrollX: 0, scrollY: 0,
+    useCORS: true, allowTaint: true, logging: false, imageTimeout: 6000,
+  });
+  const out = document.createElement("canvas");
+  out.width = SW; out.height = SH;
+  const c = out.getContext("2d");
+  c.fillStyle = "#ffffff"; c.fillRect(0, 0, SW, SH);
+  c.drawImage(pageCanvas, 0, 0, W, H);
+  c.fillStyle = "#f4f5f7"; c.fillRect(W, 0, S.gutterW, SH);
+  c.strokeStyle = "#d7dae0"; c.lineWidth = 1;
+  c.beginPath(); c.moveTo(W + 0.5, 0); c.lineTo(W + 0.5, SH); c.stroke();
+  c.drawImage($("#overlay"), 0, 0, SW, SH);
+  drawCardsToCanvas(c);
+  return out.toDataURL("image/png");
+}
+
+function drawCardsToCanvas(c){
+  for (const h of S.highlights){
+    const card = document.querySelector('.card[data-id="' + h.id + '"]');
+    if (!card) continue;
+    const x = S.pageW + card.offsetLeft, y = card.offsetTop;
+    const w = card.offsetWidth, hh = card.offsetHeight;
+    const color = INTENT_COLOR[h.intent] || INTENT_COLOR.instruct;
+    c.save();
+    c.fillStyle = "#ffffff";
+    roundRect(c, x, y, w, hh, 9); c.fill();
+    c.strokeStyle = "#dfe3e8"; c.lineWidth = 1;
+    roundRect(c, x + 0.5, y + 0.5, w - 1, hh - 1, 9); c.stroke();
+    c.fillStyle = color;
+    roundRect(c, x, y, 4, hh, 2); c.fill();
+    // badge
+    c.beginPath(); c.arc(x + 22, y + 18, 9.5, 0, Math.PI * 2); c.fill();
+    c.fillStyle = "#fff"; c.font = "700 11px ui-monospace, Menlo, monospace";
+    c.textAlign = "center"; c.textBaseline = "middle";
+    c.fillText(String(h.number), x + 22, y + 18.5);
+    c.textAlign = "start"; c.textBaseline = "alphabetic";
+    // intent
+    c.fillStyle = color; c.font = "600 11px ui-monospace, Menlo, monospace";
+    c.fillText(h.intent, x + 38, y + 22);
+    // quoted text — wrapped and clipped exactly like the DOM card's 2 lines
+    c.fillStyle = "#6b7280"; c.font = "11.5px ui-sans-serif, system-ui, sans-serif";
+    const q = "“" + h.anchor.quoted_text.replace(/\s+/g, " ").trim() + "”";
+    const qLines = wrapText(c, q, w - 26).slice(0, 2);
+    if (qLines.length === 2) qLines[1] = fitText(c, qLines[1] + "…", w - 26);
+    qLines.forEach((ln, i) => c.fillText(fitText(c, ln, w - 26), x + 12, y + 44 + i * 16));
+    // comment
+    const textareaTop = 8 + 24 + qLines.length * 16 + 5;
+    c.fillStyle = "#16181d"; c.font = "13px ui-sans-serif, system-ui, sans-serif";
+    const lines = wrapText(c, h.comment || "(no comment)", w - 30);
+    lines.slice(0, 10).forEach((ln, i) =>
+      c.fillText(fitText(c, ln, w - 30), x + 14, y + textareaTop + 19 + i * 18));
+    c.restore();
+  }
+}
+
+async function exportRound(){
+  if (!S.snap){ toast("open a page first", true); return; }
+  const ann = buildAnnotations();
+  if (!ann.draw.length && !ann.highlights.length){ toast("nothing annotated yet", true); return; }
+  const blank = ann.highlights.filter(h => !h.comment.trim());
+  if (blank.length && !confirm(blank.length + " highlight(s) have no comment. Export anyway?")) return;
+
+  const notes = [];
+  let png = "";
+  try {
+    busy(true, "flattening the page…");
+    png = await flatten();
+  } catch (err){
+    notes.push("annotated.png omitted: " + (err && err.message ? err.message : String(err)));
+    console.warn("flatten failed", err);
+  }
+  try {
+    busy(true, "writing the packet…");
+    const r = await fetch("/export/" + encodeURIComponent(S.snap.id), {
+      method: "POST",
+      headers: {"content-type": "application/json"},
+      body: JSON.stringify({annotations: ann, flattened_png_base64: png, notes, viewport: ann.viewport}),
+    });
+    const body = await r.json();
+    if (!r.ok) throw new Error(body.error || ("HTTP " + r.status));
+    showDone(body);
+    S.snap.round = body.round + 1;
+    updateIdent();
+  } catch (err){
+    toast("export failed: " + err.message, true);
+  } finally {
+    busy(false);
+  }
+}
+
+function showDone(body){
+  $("#donePath").textContent = body.path + "/";
+  $("#doneMeta").textContent =
+    "session " + body.session_id + " · round " + body.round + " · " +
+    body.files.join(", ") + " · " +
+    body.counts.highlights + " highlight(s), " + body.counts.draw + " draw mark(s)";
+  const notes = (body.notes || []).filter(Boolean);
+  $("#doneNotes").innerHTML = notes.length
+    ? '<div class="hint" style="color:#f0b429;margin-top:8px">' + notes.map(n => "· " + esc(n)).join("<br>") + "</div>"
+    : "";
+  $("#donePrompt").textContent =
+    "Process the newest round in ./inbox using the redline skill. Apply the\n" +
+    "annotations, reply to questions, verify at both widths, and give me the\n" +
+    "change summary.";
+  $("#doneScrim").classList.add("open");
+}
+
+/* =========================================================================
+   8. Inbox browser
+   ========================================================================= */
+async function refreshInbox(){
+  const list = $("#inboxList");
+  list.innerHTML = '<div class="empty">loading…</div>';
+  try {
+    const r = await fetch("/inbox", {cache:"no-store"});
+    const data = await r.json();
+    $("#inboxRoot").textContent = data.root ? "· " + data.root : "";
+    if (!data.sessions || !data.sessions.length){
+      list.innerHTML = '<div class="empty">no rounds yet — export one and it shows up here</div>';
+      return;
+    }
+    list.innerHTML = data.sessions.map(sesh => {
+      const rounds = sesh.rounds.map(rd => {
+        const tags = [];
+        if (rd.has_snapshot) tags.push('<span class="tag">packet</span>');
+        if (rd.has_result) tags.push('<span class="tag done">result</span>');
+        if (rd.pending) tags.push('<span class="tag pend">awaiting agent</span>');
+        const btns = [];
+        if (rd.has_result){
+          btns.push('<button class="btn primary" data-open="' + esc(rd.dir) + '/result.html">Annotate result → round ' + (sesh.rounds[sesh.rounds.length-1].round + 1) + '</button>');
+        }
+        if (rd.has_snapshot){
+          btns.push('<button class="btn ghost" data-open="' + esc(rd.dir) + '/snapshot.html">snapshot</button>');
+        }
+        return '<div class="rnd"><span class="rn">round ' + rd.round + '</span>' +
+               tags.join(" ") + '<span class="spacer"></span>' + btns.join(" ") + '</div>';
+      }).join("");
+      return '<div class="sesh"><div class="sh"><span class="sid">' + esc(sesh.session_id) + '</span>' +
+             '<span class="stitle">' + esc(sesh.title || "") + '</span></div>' + rounds + "</div>";
+    }).join("");
+    list.querySelectorAll("[data-open]").forEach(b =>
+      b.addEventListener("click", () => openPath(b.dataset.open)));
+  } catch (err){
+    list.innerHTML = '<div class="empty">could not read the inbox: ' + esc(err.message) + "</div>";
+  }
+}
+
+async function openPath(path, isURL){
+  busy(true, "snapshotting…");
+  try {
+    const payload = isURL || /^https?:\/\//i.test(path) ? {url: path} : {path: path};
+    const r = await fetch("/snapshot", {
+      method: "POST", headers: {"content-type": "application/json"},
+      body: JSON.stringify(payload),
+    });
+    const body = await r.json();
+    if (!r.ok) throw new Error(body.error || ("HTTP " + r.status));
+    location.href = body.view_url;
+  } catch (err){
+    busy(false);
+    toast("could not open: " + err.message, true);
+  }
+}
+
+/* =========================================================================
+   9. Chrome wiring
+   ========================================================================= */
+function buildSwatches(){
+  $("#swatches").innerHTML = DRAW_COLORS.map((c, i) =>
+    '<button class="btn swatch' + (i === 0 ? " on" : "") + '" data-color="' + c + '" style="background:' + c + '"></button>').join("");
+  $$("#swatches .swatch").forEach(b => b.addEventListener("click", () => {
+    S.color = b.dataset.color;
+    $$("#swatches .swatch").forEach(x => x.classList.toggle("on", x === b));
+  }));
+}
+
+function buildLegend(){
+  $("#hlTools").innerHTML =
+    '<span class="lg" style="color:var(--dim)">select text →</span>' +
+    INTENTS.map(i => '<span class="lg" title="' + i.hint + '"><i style="background:' + i.color + '"></i>' + i.id + "</span>").join("");
+}
+
+function setMode(mode){
+  S.mode = mode;
+  document.body.dataset.mode = mode;
+  $("#mDraw").classList.toggle("on", mode === "draw");
+  $("#mHighlight").classList.toggle("on", mode === "highlight");
+  $("#drawTools").classList.toggle("hidden", mode !== "draw");
+  $("#hlTools").classList.toggle("hidden", mode !== "highlight");
+}
+
+function setTool(tool){
+  S.tool = tool;
+  $$(".tool").forEach(b => b.classList.toggle("on", b.dataset.tool === tool));
+}
+
+function updateCounts(){
+  const n = S.draw.length + S.highlights.length;
+  $("#counts").innerHTML = "<b>" + n + "</b> mark" + (n === 1 ? "" : "s") +
+    (S.highlights.length ? " · " + S.highlights.length + " comment" + (S.highlights.length === 1 ? "" : "s") : "");
+}
+
+function updateIdent(){
+  if (!S.snap){ $("#ident").textContent = "no page"; return; }
+  const s = S.snap;
+  $("#ident").innerHTML = "<b>round " + s.round + "</b> · " + esc(s.session_id) +
+    (s.parent_round != null ? " ← round " + s.parent_round : "");
+  $("#ident").title = (s.source ? s.source.kind + ": " + s.source.ref : "");
+}
+
+function wireToolbar(){
+  $$("[data-mode]").forEach(b => b.addEventListener("click", () => setMode(b.dataset.mode)));
+  $$(".tool").forEach(b => b.addEventListener("click", () => setTool(b.dataset.tool)));
+  $("#strokeW").addEventListener("change", e => S.strokeWidth = parseInt(e.target.value, 10));
+  $("#pageWidth").addEventListener("change", e => setPageWidth(parseInt(e.target.value, 10)));
+  $("#zoomIn").addEventListener("click", () => { S.zoom = clamp(Math.round((S.zoom + 0.1) * 100) / 100, 0.3, 2); applyStageSize(); });
+  $("#zoomOut").addEventListener("click", () => { S.zoom = clamp(Math.round((S.zoom - 0.1) * 100) / 100, 0.3, 2); applyStageSize(); });
+  $("#zoomFit").addEventListener("click", () => { fitZoom(); applyStageSize(); });
+  $("#undoBtn").addEventListener("click", undo);
+  $("#clearBtn").addEventListener("click", clearMarks);
+  $("#exportBtn").addEventListener("click", exportRound);
+  $("#openBtn").addEventListener("click", () => openPanel(false));
+  $("#helpBtn").addEventListener("click", () => $("#helpScrim").classList.add("open"));
+  setMode("highlight");
+  setTool("pen");
+}
+
+function undo(){
+  if (S.mode === "draw"){
+    if (!S.draw.length) return toast("nothing to undo");
+    const last = S.draw.pop();
+    if (last.type === "note" && last.attached_to){
+      const p = S.draw.find(o => o.id === last.attached_to);
+      if (p) p.note = "";
+    }
+  } else {
+    if (!S.highlights.length) return toast("nothing to undo");
+    // document order != creation order, so undo removes the newest comment
+    let newest = S.highlights[0];
+    for (const h of S.highlights) if ((h._seq || 0) > (newest._seq || 0)) newest = h;
+    S.highlights = S.highlights.filter(h => h !== newest);
+    renumber();
+  }
+  refresh();
+}
+
+function clearMarks(){
+  if (S.mode === "draw"){
+    if (!S.draw.length) return;
+    if (!confirm("Clear " + S.draw.length + " draw mark(s)?")) return;
+    S.draw = [];
+  } else {
+    if (!S.highlights.length) return;
+    if (!confirm("Clear " + S.highlights.length + " comment(s)?")) return;
+    S.highlights = [];
+  }
+  refresh();
+}
+
+function openPanel(force){
+  $("#openScrim").classList.add("open");
+  $("#openClose").style.display = force ? "none" : "";
+  refreshInbox();
+  setTimeout(() => $("#openInput").focus(), 30);
+}
+function closePanel(){ $("#openScrim").classList.remove("open"); }
+
+function wireModals(){
+  $("#openClose").addEventListener("click", closePanel);
+  $("#openGo").addEventListener("click", () => {
+    const v = $("#openInput").value.trim();
+    if (v) openPath(v);
+  });
+  $("#openInput").addEventListener("keydown", e => {
+    if (e.key === "Enter"){ const v = e.target.value.trim(); if (v) openPath(v); }
+    e.stopPropagation();
+  });
+  $("#sampleBtn").addEventListener("click", () => openPath("sample:article"));
+  $("#doneClose").addEventListener("click", () => $("#doneScrim").classList.remove("open"));
+  $("#openAfter").addEventListener("click", () => { $("#doneScrim").classList.remove("open"); openPanel(false); });
+  $("#helpClose").addEventListener("click", () => $("#helpScrim").classList.remove("open"));
+  $("#copyPrompt").addEventListener("click", async () => {
+    try { await navigator.clipboard.writeText($("#donePrompt").textContent); toast("prompt copied"); }
+    catch(_){ toast("copy failed — select it by hand", true); }
+  });
+  $$(".scrim").forEach(s => s.addEventListener("mousedown", e => {
+    if (e.target === s && !(s.id === "openScrim" && !S.snap)) s.classList.remove("open");
+  }));
+}
+
+function wireKeys(){
+  window.addEventListener("keydown", e => {
+    const t = e.target;
+    const typing = t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT" || t.isContentEditable);
+    const meta = e.metaKey || e.ctrlKey;
+    if (meta && e.key.toLowerCase() === "z"){ e.preventDefault(); undo(); return; }
+    if (meta && e.key.toLowerCase() === "e"){ e.preventDefault(); exportRound(); return; }
+    if (e.key === "Escape"){
+      $$(".scrim.open").forEach(s => { if (!(s.id === "openScrim" && !S.snap)) s.classList.remove("open"); });
+      $("#noteBox").classList.remove("open");
+      if (S.drag){ S.drag = null; render(); }
+      return;
+    }
+    if (typing || meta) return;
+    switch (e.key){
+      case "1": setMode("highlight"); break;
+      case "2": setMode("draw"); break;
+      case "p": setMode("draw"); setTool("pen"); break;
+      case "r": setMode("draw"); setTool("rect"); break;
+      case "a": setMode("draw"); setTool("arrow"); break;
+      case "n": setMode("draw"); setTool("note"); break;
+      case "[": S.strokeWidth = Math.max(2, S.strokeWidth - 2); $("#strokeW").value = String(S.strokeWidth); break;
+      case "]": S.strokeWidth = Math.min(7, S.strokeWidth + 2); $("#strokeW").value = String(S.strokeWidth); break;
+      case "?": $("#helpScrim").classList.add("open"); break;
+    }
+  });
+  let rt = null;
+  window.addEventListener("resize", () => {
+    clearTimeout(rt);
+    rt = setTimeout(() => { if (S.doc){ fitZoom(); applyStageSize(); } }, 120);
+  });
+}
+
+/* =========================================================================
+   10. Test / console hooks.
+   Same code paths as the UI — used by the acceptance harness and handy when
+   something misbehaves on stage.
+   ========================================================================= */
+window.__redline = {
+  S,
+  setMode, setTool, exportRound, buildAnnotations, resolveAnchor, makeAnchor,
+  rectsForRange, buildTextIndex, refresh,
+  // Select a text range in the snapshot exactly as a mouse drag would, then
+  // let the normal selection handler turn it into a highlight.
+  selectAndHighlight(selector, start, end, intent, comment){
+    const el = S.doc.querySelector(selector);
+    if (!el) throw new Error("no element for " + selector);
+    const range = rangeInElement(el, start, end);
+    if (!range) throw new Error("could not build range");
+    const sel = S.doc.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+    onSelection();
+    const h = S.highlights.find(x => x.id === "h" + S.hseq);
+    if (!h) throw new Error("highlight not created");
+    if (intent) h.intent = intent;
+    if (comment != null) h.comment = comment;
+    syncCards(); refresh();
+    return h;
+  },
+  addDraw(obj){ commitShape(obj); return S.draw[S.draw.length - 1]; },
+  addNote,
+  ready(){ return !!S.doc && !!S.snap && !!S.textIndex; },
+};
+
+boot();
+</script>
+</body>
+</html>
