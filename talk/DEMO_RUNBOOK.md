@@ -198,6 +198,16 @@ Open a **second terminal**, also in `/home/user/demos/redline`, running
 `claude`. That is where all three demo prompts go. A **third** terminal holds the
 Act 0 `effort_sweep` output.
 
+**Materials:** `talk/slides.html` is the primary screen — it's the deck you
+click through on stage. THE MAP is embedded in slide 7, so there's no
+tab-switch to a separate map page. `talk/slides.pdf` is wifi/projector
+insurance — keep it open in a PDF viewer on the presenter laptop as a fallback
+if `slides.html` won't render.
+
+> **TONIGHT:** click through all 18 slides once at the projector's real
+> resolution — confirm nothing clips and slide 7's map renders before the room
+> fills.
+
 ### Act 0 — The dial, 60 seconds
 
 Switch to terminal 3. Show the pre-run table: same prompt, Opus 5 at `low` vs

@@ -53,12 +53,14 @@ body{font-family:var(--sans); color:var(--ink); -webkit-font-smoothing:antialias
 
 /* warm bloom, borrowed from the sample's cover */
 .glow::before{
-  content:""; position:absolute; inset:0; pointer-events:none;
+  content:""; position:absolute; inset:0; pointer-events:none; z-index:0;
   background:
     radial-gradient(1100px 760px at 6% 108%, rgba(255,106,85,.17), transparent 62%),
     radial-gradient(820px 560px at 99% -6%, rgba(242,184,75,.10), transparent 60%);
 }
-.glow > *{position:relative;}
+/* raise content above the bloom without clobbering absolutely-placed chrome */
+.glow > .rh, .glow > .body{position:relative; z-index:1;}
+.glow > .counter, .glow > .hintbar{z-index:1;}
 
 /* ============================================================
    TYPE
@@ -235,11 +237,11 @@ code, .code{font-family:var(--mono); font-size:19px; color:var(--ink);
 .links .lk .u{font-family:var(--mono); font-size:18px; color:var(--coral); word-break:break-all;}
 
 /* takeaways */
-.take{display:flex; flex-direction:column; gap:34px;}
-.take li{display:grid; grid-template-columns:78px 1fr; align-items:baseline; list-style:none;}
-.take .n{font-family:var(--mono); font-size:34px; font-weight:600; color:var(--coral);}
-.take .t{font-size:44px; line-height:1.24; font-weight:600; letter-spacing:-.022em;}
-.take .t .s{display:block; font-size:26px; font-weight:400; color:var(--muted); margin-top:10px; letter-spacing:0;}
+.take{display:flex; flex-direction:column; gap:44px;}
+.take li{display:grid; grid-template-columns:92px 1fr; align-items:baseline; list-style:none;}
+.take .n{font-family:var(--mono); font-size:36px; font-weight:600; color:var(--coral);}
+.take .t{font-size:52px; line-height:1.2; font-weight:600; letter-spacing:-.026em;}
+.take .t .s{display:block; font-size:27px; font-weight:400; color:var(--muted); margin-top:13px; letter-spacing:0; max-width:76ch;}
 
 .hintbar{
   position:absolute; left:104px; bottom:34px; font-family:var(--mono); font-size:15px;
@@ -256,8 +258,9 @@ body.notes .slide.current > aside{
   padding:22px 104px 26px; z-index:40; text-align:left;
   box-shadow:0 -20px 50px rgba(0,0,0,.6);
 }
-.slide > aside b{display:block; font-family:var(--mono); font-size:14px; letter-spacing:.22em;
+.slide > aside > b{display:block; font-family:var(--mono); font-size:14px; letter-spacing:.22em;
   text-transform:uppercase; color:var(--coral); margin-bottom:10px; font-weight:400;}
+.slide > aside li b, .slide > aside p b{font-weight:700; color:#FFF;}
 .slide > aside ul{margin:0; padding-left:22px;}
 .slide > aside li{font-size:19.5px; line-height:1.5; color:var(--ink); margin-bottom:7px;}
 .slide > aside li i{color:var(--muted); font-style:normal;}
@@ -316,16 +319,18 @@ body.ov #ovhint{display:block;}
 }
 #map-toggle:hover, #map-toggle:focus-visible{color:var(--ink); border-color:var(--muted); outline:none;}
 #map-wrap.show-ghosts #map-toggle{color:var(--ink); border-color:var(--gpt);}
-#map-plot{flex:1; min-height:0; margin-top:16px; position:relative;}
+/* aspect-limited so the plot keeps roughly the 2:1 proportions the
+   labels are tuned for, instead of flattening across the full slide */
+#map-plot{flex:1; min-height:0; margin:16px auto 0; width:100%; max-width:1460px; position:relative;}
 #map-plot svg{width:100%; height:100%; display:block;}
-#map-wrap .axis-label{fill:var(--muted); font-size:13.5px; font-family:var(--mono);}
-#map-wrap .tick{fill:var(--muted); font-size:12.5px; font-family:var(--mono);}
+#map-wrap .axis-label{fill:var(--muted); font-size:15px; font-family:var(--mono);}
+#map-wrap .tick{fill:var(--muted); font-size:14px; font-family:var(--mono);}
 #map-wrap .pt{cursor:pointer; transition:r .15s;}
 #map-wrap .curve{fill:none; stroke-width:2.6; opacity:.88;}
-#map-wrap .plabel{font-size:12.5px; font-family:var(--mono); fill:var(--muted);}
-#map-wrap .mlabel{font-size:15px; font-weight:600;}
-#map-wrap .zone-label{font-size:12.5px; font-family:var(--mono); letter-spacing:.18em; opacity:.6;}
-#map-wrap .callout{font-size:14px; fill:var(--ink); opacity:.92;}
+#map-wrap .plabel{font-size:14px; font-family:var(--mono); fill:var(--muted);}
+#map-wrap .mlabel{font-size:16.5px; font-weight:600;}
+#map-wrap .zone-label{font-size:14px; font-family:var(--mono); letter-spacing:.18em; opacity:.6;}
+#map-wrap .callout{font-size:15.5px; fill:var(--ink); opacity:.92;}
 #map-ghosts{display:none;}
 #map-wrap.show-ghosts #map-ghosts{display:block;}
 #map-ghosts .curve{opacity:.5;}
@@ -371,7 +376,7 @@ body.ov #ovhint{display:block;}
 
 <!-- ============================== 1 · TITLE ============================== -->
 <div class="cell"><section class="slide glow">
-  <div class="rh"><span class="rh-sec">Opus 5 · July 2026</span><span>Dustin</span></div>
+  <div class="rh"><span>Making the most of Claude Opus 5</span><span class="rh-sec">Dustin</span></div>
   <div class="body">
     <div class="eyebrow">Opus 5 · July 2026</div>
     <h1>Making the Most<br>of Claude <span style="color:var(--coral)">Opus&nbsp;5</span></h1>
@@ -395,7 +400,7 @@ body.ov #ovhint{display:block;}
 
 <!-- ============================== 2 · HOOK ============================== -->
 <div class="cell"><section class="slide glow">
-  <div class="rh"><span class="rh-sec">The hook</span><span>Opus 5 · July 2026</span></div>
+  <div class="rh"><span>Making the most of Claude Opus 5</span><span class="rh-sec">The hook</span></div>
   <div class="body">
     <div class="eyebrow">Five days ago</div>
     <h2 class="big">It doubled its predecessor's<br>hardest-benchmark score.<br><span class="ac">The price didn't move.</span></h2>
@@ -423,7 +428,7 @@ body.ov #ovhint{display:block;}
 
 <!-- ============================== 3 · LINEUP ============================== -->
 <div class="cell"><section class="slide">
-  <div class="rh"><span class="rh-sec">The lineup</span><span>60 seconds</span></div>
+  <div class="rh"><span>Making the most of Claude Opus 5</span><span class="rh-sec">The lineup</span></div>
   <div class="body">
     <div class="eyebrow">The mid-2026 lineup in 60 seconds</div>
     <h2 style="margin-bottom:38px;">Four models, one dial each.</h2>
@@ -486,7 +491,7 @@ body.ov #ovhint{display:block;}
 
 <!-- ============================== 4 · OPUS 5 vs 4.8 ============================== -->
 <div class="cell"><section class="slide">
-  <div class="rh"><span class="rh-sec">Opus 5 vs 4.8</span><span>What actually changed</span></div>
+  <div class="rh"><span>Making the most of Claude Opus 5</span><span class="rh-sec">Opus 5 vs 4.8</span></div>
   <div class="body">
     <div class="eyebrow">Opus 5 vs Opus 4.8</div>
     <h2 style="margin-bottom:34px;">What actually changed.</h2>
@@ -540,7 +545,7 @@ body.ov #ovhint{display:block;}
 
 <!-- ============================== 5 · FIELD STORIES ============================== -->
 <div class="cell"><section class="slide">
-  <div class="rh"><span class="rh-sec">Field stories</span><span>Pick one</span></div>
+  <div class="rh"><span>Making the most of Claude Opus 5</span><span class="rh-sec">Field stories</span></div>
   <div class="body">
     <div class="eyebrow">From the field</div>
     <h2 style="margin-bottom:40px;">Two stories, one behavior.</h2>
@@ -575,7 +580,7 @@ body.ov #ovhint{display:block;}
 
 <!-- ============================== 6 · COUNTERWEIGHT ============================== -->
 <div class="cell"><section class="slide">
-  <div class="rh"><span class="rh-sec">The honest counterweight</span><span>CodeRabbit, early review</span></div>
+  <div class="rh"><span>Making the most of Claude Opus 5</span><span class="rh-sec">The honest counterweight</span></div>
   <div class="body">
     <div class="eyebrow">The honest counterweight</div>
     <h2 style="margin-bottom:22px;">A stronger builder<br>than reviewer.</h2>
@@ -615,7 +620,7 @@ body.ov #ovhint{display:block;}
 
 <!-- ============================== 7 · THE MAP ============================== -->
 <div class="cell"><section class="slide" id="s-map" style="padding:44px 72px 56px;">
-  <div class="rh" style="font-size:16px;"><span class="rh-sec">The map</span><span>Cost × capability, July 2026</span></div>
+  <div class="rh" style="font-size:16px;"><span>Making the most of Claude Opus 5</span><span class="rh-sec">The map</span></div>
   <div class="body top" id="map-wrap" style="padding:22px 0 0;">
     <div id="map-head">
       <div>
@@ -661,7 +666,7 @@ body.ov #ovhint{display:block;}
 
 <!-- ============================== 8 · THE TWO ZONES ============================== -->
 <div class="cell"><section class="slide">
-  <div class="rh"><span class="rh-sec">The two zones</span><span>What the shading means</span></div>
+  <div class="rh"><span>Making the most of Claude Opus 5</span><span class="rh-sec">The two zones</span></div>
   <div class="body">
     <div class="eyebrow">The two zones</div>
     <h2 style="margin-bottom:36px;">The fan-out zone is priced <span class="ac">per attempt</span>.<br>The judgment zone is priced <span class="ac">per mistake</span>.</h2>
@@ -702,7 +707,7 @@ body.ov #ovhint{display:block;}
 
 <!-- ============================== 9 · DON'T TAKE MY WORD FOR IT ============================== -->
 <div class="cell"><section class="slide">
-  <div class="rh"><span class="rh-sec">Cross-lab convergence</span><span>Don't take my word for it</span></div>
+  <div class="rh"><span>Making the most of Claude Opus 5</span><span class="rh-sec">Cross-lab convergence</span></div>
   <div class="body">
     <div class="eyebrow">Don't take my word for it</div>
     <h2 style="margin-bottom:36px;">Every lab shipped a dial in 2026.</h2>
@@ -712,6 +717,7 @@ body.ov #ovhint{display:block;}
         <h3 style="font-size:30px;">This map, at industry scale.</h3>
         <p style="font-size:21.5px; margin-top:12px;">Intelligence Index vs Cost per Task — Pareto-frontier framing: <span class="ac">everything off the frontier is paying more for less</span>. Now literally on SF billboards.</p>
         <p style="font-size:21.5px;">They plot effort levels as curves too: for any GPT-5.6 Terra effort level, a Luna or Sol level beats it. Same "curves cross" logic.</p>
+        <p style="font-size:21.5px;">Broader context: 9 of the 13 models on their price-intelligence frontier are open-weights. The fan-out zone is contested territory.</p>
       </div>
       <div class="card" style="padding:30px 32px;">
         <span class="tag" style="color:var(--coral)">The convergence</span>
@@ -725,9 +731,9 @@ body.ov #ovhint{display:block;}
       </div>
     </div>
     <div class="strip">
-      <div class="kicker" style="display:flex; align-items:baseline; gap:22px; flex-wrap:wrap;">
-        <span style="font-family:var(--mono); font-size:44px; font-weight:700; color:var(--coral); letter-spacing:-.03em;">~5–10× / year</span>
-        <span style="font-size:29px;">Pareto-frontier price-performance improvement. This map is a snapshot of a curve sliding down-and-right, fast.</span>
+      <div class="kicker" style="display:grid; grid-template-columns:auto 1fr; gap:30px; align-items:center;">
+        <span style="font-family:var(--mono); font-size:44px; font-weight:700; color:var(--coral); letter-spacing:-.03em; white-space:nowrap;">~5–10× / year</span>
+        <span style="font-size:28px;">Pareto-frontier price-performance improvement. This map is a snapshot of a curve sliding down-and-right, fast.</span>
       </div>
     </div>
     <div class="mono-note" style="margin-top:20px;">Caveat: cross-lab dials aren't apples-to-apples — comparisons normalize by token spend, not parameter names. Several headline numbers are vendor-reported.</div>
@@ -746,7 +752,7 @@ body.ov #ovhint{display:block;}
 
 <!-- ============================== 10 · MIGRATION CHECKLIST ============================== -->
 <div class="cell"><section class="slide">
-  <div class="rh"><span class="rh-sec">Migration checklist</span><span>What to delete</span></div>
+  <div class="rh"><span>Making the most of Claude Opus 5</span><span class="rh-sec">Migration checklist</span></div>
   <div class="body">
     <div class="eyebrow">Migration checklist</div>
     <h2 style="margin-bottom:34px;">Delete these from your prompts.</h2>
@@ -779,7 +785,7 @@ body.ov #ovhint{display:block;}
         </div>
         <div class="quote">
           <q>Every six months, delete your CLAUDE.md, delete your skills, delete your hooks — see what the model does, and it might surprise you.</q>
-          <span class="cite">Boris Cherny · creator of Claude Code · YC Startup School 2026</span>
+          <span class="cite">Boris Cherny · creator of Claude Code · YC 2026</span>
         </div>
       </div>
     </div>
@@ -798,7 +804,7 @@ body.ov #ovhint{display:block;}
 
 <!-- ============================== 11 · DYNAMIC WORKFLOWS ============================== -->
 <div class="cell"><section class="slide">
-  <div class="rh"><span class="rh-sec">Dynamic Workflows</span><span>Research preview</span></div>
+  <div class="rh"><span>Making the most of Claude Opus 5</span><span class="rh-sec">Dynamic Workflows</span></div>
   <div class="body">
     <div class="eyebrow">Introduction to Dynamic Workflows</div>
     <h2 style="margin-bottom:34px;">Delegation instincts, as infrastructure.</h2>
@@ -840,7 +846,7 @@ body.ov #ovhint{display:block;}
 
 <!-- ============================== 12 · GUARDRAILS & WIRING ============================== -->
 <div class="cell"><section class="slide">
-  <div class="rh"><span class="rh-sec">Dynamic Workflows</span><span>Guardrails &amp; wiring</span></div>
+  <div class="rh"><span>Making the most of Claude Opus 5</span><span class="rh-sec">Dynamic Workflows</span></div>
   <div class="body">
     <div class="eyebrow">Guardrails &amp; wiring</div>
     <h2 style="margin-bottom:40px;">Four knobs worth knowing.</h2>
@@ -888,7 +894,7 @@ body.ov #ovhint{display:block;}
 
 <!-- ============================== 13 · TWO STORIES THAT SELL IT ============================== -->
 <div class="cell"><section class="slide">
-  <div class="rh"><span class="rh-sec">Dynamic Workflows</span><span>Two stories that sell it</span></div>
+  <div class="rh"><span>Making the most of Claude Opus 5</span><span class="rh-sec">Dynamic Workflows</span></div>
   <div class="body">
     <div class="eyebrow">Two stories that sell it</div>
     <h2 style="margin-bottom:36px;">Nobody had to ask twice.</h2>
@@ -927,7 +933,7 @@ body.ov #ovhint{display:block;}
 
 <!-- ============================== 14 · DEMO HUB ============================== -->
 <div class="cell"><section class="slide">
-  <div class="rh"><span class="rh-sec">Live demo</span><span>One tool, three acts</span></div>
+  <div class="rh"><span>Making the most of Claude Opus 5</span><span class="rh-sec">Live demo</span></div>
   <div class="body">
     <div class="eyebrow">Live demo · one tool, three acts</div>
     <h2 style="margin-bottom:34px;">A redline round, end to end.</h2>
@@ -982,7 +988,7 @@ body.ov #ovhint{display:block;}
 
 <!-- ============================== 15 · THREE ROUTING LAYERS ============================== -->
 <div class="cell"><section class="slide">
-  <div class="rh"><span class="rh-sec">Act 2 · smart routing</span><span>Three layers</span></div>
+  <div class="rh"><span>Making the most of Claude Opus 5</span><span class="rh-sec">Act 2 · smart routing</span></div>
   <div class="body">
     <div class="eyebrow">Act 2 · the three routing layers</div>
     <h2 style="margin-bottom:40px;">Cheapest decision-maker first.</h2>
@@ -1032,7 +1038,7 @@ body.ov #ovhint{display:block;}
 
 <!-- ============================== 16 · QUICK HITS ============================== -->
 <div class="cell"><section class="slide">
-  <div class="rh"><span class="rh-sec">Quick hits</span><span>Platform engineers &amp; designers</span></div>
+  <div class="rh"><span>Making the most of Claude Opus 5</span><span class="rh-sec">Quick hits</span></div>
   <div class="body">
     <div class="eyebrow">Quick hits</div>
     <h2 style="margin-bottom:40px;">Two rooms, two lists.</h2>
@@ -1069,7 +1075,7 @@ body.ov #ovhint{display:block;}
 
 <!-- ============================== 17 · CLOSE ============================== -->
 <div class="cell"><section class="slide glow">
-  <div class="rh"><span class="rh-sec">Close</span><span>Three takeaways</span></div>
+  <div class="rh"><span>Making the most of Claude Opus 5</span><span class="rh-sec">Close</span></div>
   <div class="body">
     <div class="eyebrow">Take three things</div>
     <ol class="take">
@@ -1091,7 +1097,7 @@ body.ov #ovhint{display:block;}
 
 <!-- ============================== 18 · LINKS ============================== -->
 <div class="cell"><section class="slide">
-  <div class="rh"><span class="rh-sec">Links</span><span>Making the Most of Claude Opus 5 · Dustin</span></div>
+  <div class="rh"><span>Making the most of Claude Opus 5</span><span class="rh-sec">Links</span></div>
   <div class="body">
     <div class="eyebrow">Where to read the rest</div>
     <h2 style="margin-bottom:30px;">Links.</h2>
@@ -1140,8 +1146,8 @@ body.ov #ovhint{display:block;}
 
   /* Fit the drawing box to the space the slide actually gives us,
      so the SVG fills its panel instead of letterboxing. */
-  const pw=wrap.clientWidth||1560, ph=wrap.clientHeight||760;
-  const W=1120, H=Math.max(420, Math.min(760, Math.round(W*ph/pw)));
+  const pw=wrap.clientWidth||1460, ph=wrap.clientHeight||677;
+  const W=1120, H=Math.max(440, Math.min(760, Math.round(W*ph/pw)));
   svg.setAttribute("viewBox","0 0 "+W+" "+H);
 
   const M={l:78,r:196,t:34,b:62};
@@ -1153,38 +1159,38 @@ body.ov #ovhint{display:block;}
   const series=[
    {name:"Haiku 4.5",color:C.haiku,pts:[
      {e:"—",c:1,v:56,note:"<b>Haiku 4.5</b>Anthropic's efficiency tier: built for parallelized execution, subagents, and latency-sensitive paths. The fan-out workhorse."}]},
-   {name:"Sonnet 5",color:C.sonnet,pts:[
+   {name:"Sonnet 5",color:C.sonnet,lab:{i:0,dx:-16,dy:6,anchor:"end"},pts:[
      {e:"low",c:2.2,v:66,note:"<b>Sonnet 5 · low</b>High-volume, well-scoped tasks where cost matters."},
      {e:"med",c:3.2,v:72,note:"<b>Sonnet 5 · medium</b>Everyday agentic work at mid-tier pricing ($2/$10 intro to Aug 31)."},
      {e:"high",c:4.8,v:77,note:"<b>Sonnet 5 · high</b>Performs close to Opus 4.8 — beat it on Terminal-Bench 2.1 (80.4 vs 74.6), the first Sonnet to pass its Opus sibling on a major coding benchmark."},
-     {e:"xhigh",c:7.5,v:80,note:"<b>Sonnet 5 · xhigh</b>⚠ Cost approaches Opus-4.8-class here while trailing on several benchmarks — the curves cross: jump tiers instead."}]},
+     {e:"xhigh",c:7.5,v:80,below:true,note:"<b>Sonnet 5 · xhigh</b>⚠ Cost approaches Opus-4.8-class here while trailing on several benchmarks — the curves cross: jump tiers instead."}]},
    {name:"Opus 4.8",color:C.opus48,ref:true,pts:[
      {e:"high",c:9,v:77,note:"<b>Opus 4.8 · high (reference)</b>The previous workhorse. Same $5/$25 price as Opus 5 — which more than doubles its Frontier-Bench score at lower cost per task."}]},
-   {name:"Opus 5",color:C.opus5,star:true,pts:[
-     {e:"low",c:5.5,v:76,note:"<b>Opus 5 · low</b>Low & medium are meaningfully stronger than on any prior Opus — strong quality at a fraction of the tokens and latency. Use liberally where evals hold."},
+   {name:"Opus 5",color:C.opus5,star:true,lab:{i:4,dx:-22,dy:30,anchor:"end"},pts:[
+     {e:"low",c:5.5,v:76,below:true,note:"<b>Opus 5 · low</b>Low & medium are meaningfully stronger than on any prior Opus — strong quality at a fraction of the tokens and latency. Use liberally where evals hold."},
      {e:"med",c:7,v:81,note:"<b>Opus 5 · medium</b>Work you'd never have trusted to medium on 4.8 may run fine here, at a real saving."},
      {e:"high",c:10,v:85,note:"<b>Opus 5 · high</b>The API default. Same price as Opus 4.8, new state of the art on Frontier-Bench and GDPval-AA."},
      {e:"xhigh",c:15,v:90,note:"<b>Opus 5 · xhigh</b>Recommended for demanding coding & agentic work. CursorBench 3.2: 70.1 vs Fable's 70.4 — near-parity at half the cost. Frontier-Bench peaks here (43.3 vs Fable's 33.7)."},
      {e:"max",c:19,v:90.5,note:"<b>Opus 5 · max</b>Benchmark-dependent peak: tops the Artificial Analysis Intelligence Index at 61 — highest of 170 tracked models, one point above Fable 5 — and leads GDPval-AA v2 by >100 Elo. Yet Frontier-Bench peaks at xhigh. At the very top, 'better' depends on the meter."}]},
    {name:"Fable 5",color:C.fable,pts:[
-     {e:"high",c:20,v:89.5,note:"<b>Fable 5 · high</b>Mythos-class at $10/$50. Retains real edges: SWE-bench Pro (+0.8), factual knowledge (AA-Omniscience), legal & health margins, and creative/visual polish in hands-on tests."},
+     {e:"high",c:20,v:89.5,below:true,note:"<b>Fable 5 · high</b>Mythos-class at $10/$50. Retains real edges: SWE-bench Pro (+0.8), factual knowledge (AA-Omniscience), legal & health margins, and creative/visual polish in hands-on tests."},
      {e:"xhigh",c:30,v:91,note:"<b>Fable 5 · xhigh</b>AA Index 60 vs Opus 5's 61; Opus leads Frontier-Bench by 9.6 pts and the AA agentic suites by wide Elo margins — at half the price. The top of the market is an overlap, not a hierarchy."}]}
   ];
 
   const ghosts=[
-   {name:"GPT-5.6 Luna",color:C.gpt,pts:[
+   {name:"GPT-5.6 Luna",color:C.gpt,lab:{i:0,dx:-14,dy:-16,anchor:"end"},pts:[
      {e:"low",c:2,v:70,note:"<b>GPT-5.6 Luna · low</b>OpenAI's cost-efficiency star. Artificial Analysis: for any Terra effort level, a Luna or Sol level is more intelligent at no extra cost — Terra is dominated (which is why it's not on this map)."},
      {e:"high",c:4,v:79,note:"<b>GPT-5.6 Luna · high</b>Per AA's effort-curve charts, Luna pushes past GPT-5.5 on the Pareto frontier across reasoning efforts."}]},
-   {name:"GPT-5.6 Sol",color:C.gpt,dash:"7 4",pts:[
+   {name:"GPT-5.6 Sol",color:C.gpt,dash:"7 4",lab:{i:2,dx:-18,dy:-22,anchor:"end"},pts:[
      {e:"med",c:9,v:85,note:"<b>GPT-5.6 Sol · medium</b>OpenAI's flagship curve. Also added a max reasoning setting plus an 'ultra' mode that farms work to parallel subagents — same convergence on the dial."},
      {e:"high",c:15,v:89,note:"<b>GPT-5.6 Sol · high</b>The two flagship curves track closely through this region — the cross-lab race is now curve-vs-curve, not point-vs-point."},
      {e:"max",c:26,v:92,note:"<b>GPT-5.6 Sol · max</b>OpenAI's claim: within one point of Fable 5 on the AA Intelligence Index in 61% less time. Vendor-reported — but the shape of the claim matches Anthropic's Opus-vs-Fable pitch."}]},
-   {name:"Gemini 3 Pro",color:C.gemini,pts:[
+   {name:"Gemini 3 Pro",color:C.gemini,lab:{i:1,dx:-26,dy:44,anchor:"end"},pts:[
      {e:"think",c:8,v:82,note:"<b>Gemini 3 Pro · thinking</b>Google's dial: thinking levels rather than effort names — same mechanism, different label. Cross-lab comparisons normalize by token spend."},
      {e:"deep",c:16,v:87,note:"<b>Gemini 3 Pro · Deep Think</b>The top of Google's dial. Every major lab now ships one: the 2026 question is 'which model, at what effort?'"}]},
-   {name:"Grok 4.5",color:C.grok,pts:[
+   {name:"Grok 4.5",color:C.grok,lab:{i:0,dx:0,dy:-22,anchor:"middle"},pts:[
      {e:"high",c:3.5,v:80,note:"<b>Grok 4.5 · high</b>AA Index 54 vs Fable's 60 — at ~9x lower cost per Index task ($0.31 vs $2.75). Sits on the cross-lab Pareto frontier: cheap models aren't off the map, they're a different point on it."}]},
-   {name:"DeepSeek v4",color:C.deepseek,pts:[
+   {name:"DeepSeek v4",color:C.deepseek,lab:{i:0,dx:14,dy:26},pts:[
      {e:"flash",c:0.9,v:66,note:"<b>DeepSeek v4 Flash</b>AA Index 44 at ~69x cheaper than Fable per task. Broader context: 9 of the 13 models on AA's intelligence-price frontier are open-weights — the fan-out zone is contested territory."}]}
   ];
 
@@ -1194,8 +1200,9 @@ body.ov #ovhint{display:block;}
   // zones
   el("rect",{x:M.l,y:M.t,width:X(3)-M.l,height:ih,fill:C.haiku,opacity:.05});
   el("rect",{x:X(12),y:M.t,width:M.l+iw-X(12),height:ih,fill:C.opus5,opacity:.045});
-  el("text",{x:M.l+12,y:M.t+20,class:"zone-label",fill:C.haiku}).textContent="FAN-OUT ZONE";
-  el("text",{x:X(12)+12,y:M.t+20,class:"zone-label",fill:C.opus5}).textContent="JUDGMENT ZONE";
+  // zone captions sit at the FOOT of each band — the data lives along the top
+  el("text",{x:M.l+12,y:M.t+ih-14,class:"zone-label",fill:C.haiku}).textContent="FAN-OUT ZONE";
+  el("text",{x:X(12)+12,y:M.t+ih-14,class:"zone-label",fill:C.opus5}).textContent="JUDGMENT ZONE";
 
   // grid + ticks
   [1,2,4,8,16,32].forEach(c=>{
@@ -1220,8 +1227,15 @@ body.ov #ovhint{display:block;}
       const r=s.star?7.5:(s.ghost?5:6);
       if(s.ref) el("circle",{cx:X(p.c),cy:Y(p.v),r:r+4,fill:"none",stroke:s.color,"stroke-dasharray":"3 3"},parent);
       const dot=el("circle",{cx:X(p.c),cy:Y(p.v),r,fill:s.ghost?K.bg:s.color,stroke:s.ghost?s.color:"#0E1116","stroke-width":s.ghost?1.8:1.5,class:"pt"},parent);
-      if(p.e!=="—"&&!s.ghost) el("text",{x:X(p.c),y:Y(p.v)-13,class:"plabel","text-anchor":"middle"},parent).textContent=p.e;
-      if(i===s.pts.length-1) el("text",{x:X(p.c)+14,y:Y(p.v)+5,class:"mlabel",fill:s.color},parent).textContent=s.name;
+      if(p.e!=="—"&&!s.ghost)
+        el("text",{x:X(p.c),y:Y(p.v)+(p.below?28:-14),class:"plabel","text-anchor":"middle"},parent).textContent=p.e;
+      // series name: default = right of the last point, or a per-series override
+      // placed by hand to keep the crowded top-right corner readable
+      const L=s.lab;
+      if(L ? L.i===i : i===s.pts.length-1){
+        el("text",{x:X(p.c)+(L&&L.dx!==undefined?L.dx:14), y:Y(p.v)+(L&&L.dy!==undefined?L.dy:5),
+                   class:"mlabel", fill:s.color, "text-anchor":(L&&L.anchor)||"start"},parent).textContent=s.name;
+      }
 
       function show(ev){
         tooltip.innerHTML=p.note;
@@ -1246,14 +1260,14 @@ body.ov #ovhint{display:block;}
   series.forEach(s=>draw(s,svg));
 
   // callout: curves crossing (Sonnet xhigh vs Opus 5 low/med)
-  const cx1=X(6.4), cy1=Y(78.5);
-  el("line",{x1:cx1,y1:cy1-40,x2:cx1,y2:cy1+8,stroke:K.muted,"stroke-width":1,"stroke-dasharray":"2 3"});
-  el("text",{x:cx1,y:cy1-49,class:"callout","text-anchor":"middle"}).textContent="curves cross → jump tiers";
+  const cx1=X(5.5), cy1=Y(78.5);
+  el("line",{x1:cx1,y1:cy1-44,x2:cx1,y2:cy1+6,stroke:K.muted,"stroke-width":1,"stroke-dasharray":"2 3"});
+  el("text",{x:cx1,y:cy1-56,class:"callout","text-anchor":"middle"}).textContent="curves cross → jump tiers";
 
   // callout: top-of-market overlap (Opus 5 max vs Fable)
   const cx2=X(24), cy2=Y(90.3);
-  el("line",{x1:cx2,y1:cy2+28,x2:cx2,y2:cy2-2,stroke:K.muted,"stroke-width":1,"stroke-dasharray":"2 3"});
-  el("text",{x:cx2,y:cy2+44,class:"callout","text-anchor":"middle"}).textContent="overlap, not hierarchy";
+  el("line",{x1:cx2,y1:cy2+48,x2:cx2,y2:cy2-2,stroke:K.muted,"stroke-width":1,"stroke-dasharray":"2 3"});
+  el("text",{x:cx2,y:cy2+64,class:"callout","text-anchor":"middle"}).textContent="overlap, not hierarchy";
 
   // toggle — scoped to the map container, not <body>
   const btn=document.getElementById("map-toggle");
