@@ -1,0 +1,169 @@
+{
+  "created_at": "2026-07-29T18:56:54.159Z",
+  "draw": [
+    {
+      "attached_to": null,
+      "bounds": {
+        "h": 244,
+        "w": 332,
+        "x": 98,
+        "y": 320
+      },
+      "color": "#ef4444",
+      "created_at": "2026-07-29T18:56:54.154Z",
+      "id": "d1",
+      "note": "move this whole section — heading, list, and table — above 'Where the budget actually goes'",
+      "points": [
+        {
+          "x": 430,
+          "y": 564
+        },
+        {
+          "x": 98,
+          "y": 320
+        }
+      ],
+      "stroke_width": 4,
+      "type": "arrow"
+    },
+    {
+      "attached_to": "d1",
+      "bounds": {
+        "h": 76,
+        "w": 210,
+        "x": 446,
+        "y": 524
+      },
+      "color": "#ef4444",
+      "created_at": "2026-07-29T18:56:54.155Z",
+      "id": "d2",
+      "note": "move this whole section — heading, list, and table — above 'Where the budget actually goes'",
+      "points": [
+        {
+          "x": 446,
+          "y": 524
+        }
+      ],
+      "stroke_width": 4,
+      "type": "note"
+    }
+  ],
+  "highlights": [
+    {
+      "anchor": {
+        "container_tag": "p",
+        "container_text_length": 419,
+        "document_end_offset": 218,
+        "document_start_offset": 155,
+        "end_offset": 63,
+        "prefix": "not for publication\n  \n\n  \n\n    ",
+        "quoted_text": "Every product team I have worked with has a performance budget.",
+        "selector": "#lede",
+        "start_offset": 0,
+        "suffix": " Almost none of them agreed to i"
+      },
+      "comment": "is this too editorial an opener for an engineering audience, or does the confidence work? open to cutting it.",
+      "created_at": "2026-07-29T18:56:54.134Z",
+      "id": "h2",
+      "intent": "question",
+      "number": 1,
+      "rects": [
+        {
+          "h": 17,
+          "w": 442,
+          "x": 90,
+          "y": 148
+        }
+      ]
+    },
+    {
+      "anchor": {
+        "container_tag": "p",
+        "container_text_length": 253,
+        "document_end_offset": 833,
+        "document_start_offset": 580,
+        "end_offset": 253,
+        "prefix": "ad of a design discussion.\n\n    ",
+        "quoted_text": "This is a draft of an argument I keep making in review meetings, written down so I can stop making it out loud. The claim is simple: latency is a product decision, and if you do not decide it deliberately, it gets decided for you by whoever merged last.",
+        "selector": "#post \u003e p:nth-of-type(2)",
+        "start_offset": 0,
+        "suffix": "\n\n    Where the budget actually "
+      },
+      "comment": "tighten this — two sentences, not four",
+      "created_at": "2026-07-29T18:56:54.116Z",
+      "id": "h1",
+      "intent": "instruct",
+      "number": 2,
+      "rects": [
+        {
+          "h": 17,
+          "w": 667,
+          "x": 90,
+          "y": 252
+        },
+        {
+          "h": 17,
+          "w": 661,
+          "x": 90,
+          "y": 271
+        },
+        {
+          "h": 17,
+          "w": 303,
+          "x": 90,
+          "y": 290
+        }
+      ]
+    },
+    {
+      "anchor": {
+        "container_tag": "p",
+        "container_text_length": 494,
+        "document_end_offset": 1516,
+        "document_start_offset": 1438,
+        "end_offset": 306,
+        "prefix": "ach one was locally reasonable. ",
+        "quoted_text": "HTTP/2, standardised in 2012, was supposed to make bundling obsolete overnight",
+        "selector": "#post \u003e p:nth-of-type(4)",
+        "start_offset": 228,
+        "suffix": ", and a generation of build conf"
+      },
+      "comment": "double-check this date — I'm not 100% sure it's right",
+      "created_at": "2026-07-29T18:56:54.141Z",
+      "id": "h3",
+      "intent": "fact-check",
+      "number": 3,
+      "rects": [
+        {
+          "h": 17,
+          "w": 483,
+          "x": 278,
+          "y": 477
+        },
+        {
+          "h": 17,
+          "w": 62,
+          "x": 90,
+          "y": 497
+        }
+      ]
+    }
+  ],
+  "parent_round": null,
+  "round": 1,
+  "schema_version": "1.0",
+  "session_id": "s-20260729-372474",
+  "source": {
+    "kind": "sample",
+    "ref": "sample/article.html",
+    "title": "The Latency Budget Nobody Signed Off On",
+    "fetched_at": "2026-07-29T18:56:53Z"
+  },
+  "tool": "redline",
+  "viewport": {
+    "width": 860,
+    "height": 1343,
+    "gutter_width": 320,
+    "device_pixel_ratio": 1
+  }
+}

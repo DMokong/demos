@@ -1,0 +1,122 @@
+{
+  "created_at": "2026-07-29T18:59:39.672Z",
+  "draw": [],
+  "highlights": [
+    {
+      "anchor": {
+        "container_tag": "li",
+        "container_text_length": 108,
+        "document_end_offset": 2282,
+        "document_start_offset": 2174,
+        "end_offset": 108,
+        "prefix": "t managers actually feel.\n      ",
+        "quoted_text": "Interaction to next paint — the number that catches the pages that look finished and behave like wet cement.",
+        "selector": "#post \u003e ul \u003e li:nth-of-type(3)",
+        "start_offset": 0,
+        "suffix": "\n    \n\n    Pick a target for eac"
+      },
+      "comment": "trim this bullet — it's noticeably longer than the other two, match their length",
+      "created_at": "2026-07-29T18:59:39.629Z",
+      "id": "h2",
+      "intent": "instruct",
+      "number": 1,
+      "rects": [
+        {
+          "h": 17,
+          "w": 170,
+          "x": 108,
+          "y": 707
+        },
+        {
+          "h": 17,
+          "w": 480,
+          "x": 278,
+          "y": 707
+        },
+        {
+          "h": 17,
+          "w": 81,
+          "x": 108,
+          "y": 726
+        }
+      ]
+    },
+    {
+      "anchor": {
+        "container_tag": "p",
+        "container_text_length": 169,
+        "document_end_offset": 2760,
+        "document_start_offset": 2704,
+        "end_offset": 56,
+        "prefix": "\n    Measuring in the wild\n\n    ",
+        "quoted_text": "Lab numbers are reproducible and field numbers are true.",
+        "selector": "#post \u003e p:nth-of-type(7)",
+        "start_offset": 0,
+        "suffix": " You need both, and teams that o"
+      },
+      "comment": "is “field numbers are true” too cute, or does it land? genuinely torn",
+      "created_at": "2026-07-29T18:59:39.634Z",
+      "id": "h3",
+      "intent": "question",
+      "number": 2,
+      "rects": [
+        {
+          "h": 17,
+          "w": 384,
+          "x": 90,
+          "y": 969
+        }
+      ]
+    },
+    {
+      "anchor": {
+        "container_tag": "blockquote",
+        "container_text_length": 177,
+        "document_end_offset": 3525,
+        "document_start_offset": 3348,
+        "end_offset": 177,
+        "prefix": "e that gets added quietly.\n\n    ",
+        "quoted_text": "A performance budget is not a diet. It is a currency: it lets you say yes to the expensive feature you actually want by saying no to the four you did not notice you were buying.",
+        "selector": "#post \u003e blockquote",
+        "start_offset": 0,
+        "suffix": "\n\n    The teams that get this ri"
+      },
+      "comment": "make this the pull quote — bump the font size, it's the best line in the piece",
+      "created_at": "2026-07-29T18:59:39.622Z",
+      "id": "h1",
+      "intent": "instruct",
+      "number": 3,
+      "rects": [
+        {
+          "h": 17,
+          "w": 626,
+          "x": 105,
+          "y": 1165
+        },
+        {
+          "h": 17,
+          "w": 514,
+          "x": 105,
+          "y": 1184
+        }
+      ]
+    }
+  ],
+  "parent_round": null,
+  "round": 1,
+  "schema_version": "1.0",
+  "session_id": "s-20260729-dff0fd",
+  "source": {
+    "kind": "sample",
+    "ref": "sample/article.html",
+    "title": "The Latency Budget Nobody Signed Off On",
+    "fetched_at": "2026-07-29T18:59:39Z"
+  },
+  "tool": "redline",
+  "viewport": {
+    "width": 860,
+    "height": 1343,
+    "gutter_width": 320,
+    "device_pixel_ratio": 1
+  }
+}

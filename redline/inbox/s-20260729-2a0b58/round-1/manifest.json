@@ -1,0 +1,43 @@
+{
+  "schema_version": "1.0",
+  "tool": "redline",
+  "session_id": "s-20260729-2a0b58",
+  "round": 1,
+  "parent_round": null,
+  "created_at": "2026-07-29T18:59:38Z",
+  "source": {
+    "kind": "file",
+    "ref": "/home/user/demos/redline/sample/landing.html",
+    "title": "Waypoint — deploy tracking for small teams",
+    "fetched_at": "2026-07-29T18:59:38Z"
+  },
+  "viewport": {
+    "width": 860,
+    "height": 1691,
+    "gutter_width": 320,
+    "device_pixel_ratio": 1
+  },
+  "counts": {
+    "draw": 2,
+    "highlights": 3,
+    "by_intent": {
+      "delete": 1,
+      "expand": 1,
+      "instruct": 1
+    },
+    "by_draw_type": {
+      "note": 1,
+      "rect": 1
+    }
+  },
+  "files": [
+    "manifest.json",
+    "snapshot.html",
+    "annotated.png",
+    "annotations.json"
+  ],
+  "notes": [
+    "annotated.png captured via a real headless-Chromium screenshot of the annotated stage (page + overlay + comment cards), not html2canvas: the html2canvas CDN (cdnjs) is unreachable through this sandbox's proxy."
+  ],
+  "next_step": "Process this round with the redline skill (.claude/skills/redline/SKILL.md): apply the annotations to snapshot.html, then write result.html and changes.md into this directory. Never modify snapshot.html."
+}

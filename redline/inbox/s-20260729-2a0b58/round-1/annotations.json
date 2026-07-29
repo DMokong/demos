@@ -1,0 +1,193 @@
+{
+  "created_at": "2026-07-29T18:59:38.501Z",
+  "draw": [
+    {
+      "attached_to": null,
+      "bounds": {
+        "h": 146,
+        "w": 336,
+        "x": 16,
+        "y": 1123
+      },
+      "color": "#f59e0b",
+      "created_at": "2026-07-29T18:59:38.495Z",
+      "id": "d1",
+      "note": "add an annual toggle here — \"2 months free\" framing",
+      "points": [
+        {
+          "x": 16,
+          "y": 1123
+        },
+        {
+          "x": 352,
+          "y": 1269
+        }
+      ],
+      "stroke_width": 4,
+      "type": "rect"
+    },
+    {
+      "attached_to": "d1",
+      "bounds": {
+        "h": 44,
+        "w": 210,
+        "x": 16,
+        "y": 1077
+      },
+      "color": "#ef4444",
+      "created_at": "2026-07-29T18:59:38.497Z",
+      "id": "d2",
+      "note": "add an annual toggle here — \"2 months free\" framing",
+      "points": [
+        {
+          "x": 16,
+          "y": 1077
+        }
+      ],
+      "stroke_width": 4,
+      "type": "note"
+    }
+  ],
+  "highlights": [
+    {
+      "anchor": {
+        "container_tag": "p",
+        "container_text_length": 149,
+        "document_end_offset": 314,
+        "document_start_offset": 165,
+        "end_offset": 149,
+        "prefix": " things. Know what shipped.\n    ",
+        "quoted_text": "Waypoint watches every deploy across every service and tells your team, in plain language, what actually changed — no dashboard archaeology required.",
+        "selector": "#hero-sub",
+        "start_offset": 0,
+        "suffix": "\n    \n      Start free\n      Boo"
+      },
+      "comment": "cut this to one punchy sentence — lead with “no dashboard archaeology” up front, drop the throat-clearing",
+      "created_at": "2026-07-29T18:59:38.469Z",
+      "id": "h1",
+      "intent": "instruct",
+      "number": 1,
+      "rects": [
+        {
+          "h": 19,
+          "w": 551,
+          "x": 154,
+          "y": 242
+        },
+        {
+          "h": 19,
+          "w": 534,
+          "x": 163,
+          "y": 267
+        },
+        {
+          "h": 19,
+          "w": 67,
+          "x": 396,
+          "y": 293
+        }
+      ]
+    },
+    {
+      "anchor": {
+        "container_tag": "section",
+        "container_text_length": 143,
+        "document_end_offset": 509,
+        "document_start_offset": 366,
+        "end_offset": 143,
+        "prefix": "ee\n      Book a demo\n    \n  \n\n  ",
+        "quoted_text": "\n    Public beta: Waypoint is free for teams under 10 people through the end of the quarter. Pricing below reflects what happens after that.\n  ",
+        "selector": "#beta-banner",
+        "start_offset": 0,
+        "suffix": "\n\n  \n    What you get\n    \n     "
+      },
+      "comment": "we're GA now — delete this whole banner",
+      "created_at": "2026-07-29T18:59:38.480Z",
+      "id": "h2",
+      "intent": "delete",
+      "number": 2,
+      "rects": [
+        {
+          "h": 41,
+          "w": 73,
+          "x": 43,
+          "y": 462
+        },
+        {
+          "h": 15,
+          "w": 41,
+          "x": 43,
+          "y": 464
+        },
+        {
+          "h": 15,
+          "w": 32,
+          "x": 43,
+          "y": 484
+        },
+        {
+          "h": 15,
+          "w": 662,
+          "x": 126,
+          "y": 464
+        },
+        {
+          "h": 15,
+          "w": 57,
+          "x": 126,
+          "y": 484
+        }
+      ]
+    },
+    {
+      "anchor": {
+        "container_tag": "p",
+        "container_text_length": 100,
+        "document_end_offset": 1201,
+        "document_start_offset": 1101,
+        "end_offset": 100,
+        "prefix": "the moment something breaks\n    ",
+        "quoted_text": "When a metric moves, the first question is always \"what shipped.\" Waypoint answers it in one glance.",
+        "selector": "#deploys-lead",
+        "start_offset": 0,
+        "suffix": "\n  \n\n  \n    Pricing\n    Simple, "
+      },
+      "comment": "expand this — 2-3 more sentences, walk through an actual incident scenario using Waypoint",
+      "created_at": "2026-07-29T18:59:38.486Z",
+      "id": "h3",
+      "intent": "expand",
+      "number": 3,
+      "rects": [
+        {
+          "h": 16,
+          "w": 598,
+          "x": 24,
+          "y": 932
+        },
+        {
+          "h": 16,
+          "w": 47,
+          "x": 24,
+          "y": 954
+        }
+      ]
+    }
+  ],
+  "parent_round": null,
+  "round": 1,
+  "schema_version": "1.0",
+  "session_id": "s-20260729-2a0b58",
+  "source": {
+    "kind": "file",
+    "ref": "/home/user/demos/redline/sample/landing.html",
+    "title": "Waypoint — deploy tracking for small teams",
+    "fetched_at": "2026-07-29T18:59:38Z"
+  },
+  "tool": "redline",
+  "viewport": {
+    "width": 860,
+    "height": 1691,
+    "gutter_width": 320,
+    "device_pixel_ratio": 1
+  }
+}
