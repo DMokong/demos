@@ -1,0 +1,1357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Making the Most of Claude Opus 5 — Dustin</title>
+<style>
+/* ============================================================
+   TOKENS  (shared with opus-5-cost-capability-map.html)
+   ============================================================ */
+:root{
+  --bg:#0E1116; --panel:#141922; --panel2:#171D27; --grid:#222A34;
+  --ink:#E8EDF2; --muted:#8A94A0; --dim:#5F6874;
+  --coral:#FF6A55; --teal:#45D6C4; --gold:#F2B84B; --purple:#A78BFA; --steel:#7A8CA6;
+  --haiku:#45D6C4; --sonnet:#F2B84B; --opus48:#7A8CA6; --opus5:#FF6A55; --fable:#A78BFA;
+  --gpt:#5B9BD5; --gemini:#7BC47F; --grok:#C9B458; --deepseek:#B87FD9;
+  --sans:"Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+  --mono:ui-monospace, "SF Mono", Menlo, "DejaVu Sans Mono", monospace;
+  --r:14px;
+}
+*{box-sizing:border-box; margin:0; padding:0;}
+html,body{background:#07090C; height:100%; overflow:hidden;}
+body{font-family:var(--sans); color:var(--ink); -webkit-font-smoothing:antialiased;}
+
+/* ============================================================
+   DECK MECHANICS — designed at 1920x1080, scaled to fit
+   ============================================================ */
+#deck{
+  position:fixed; left:50%; top:50%; width:1920px; height:1080px;
+  transform:translate(-50%,-50%) scale(1); transform-origin:center center;
+}
+.cell{display:contents;}
+.slide{
+  position:absolute; inset:0; width:1920px; height:1080px; overflow:hidden;
+  background:var(--bg); padding:56px 104px 68px; display:flex; flex-direction:column;
+  opacity:0; visibility:hidden; transition:opacity .18s linear;
+}
+.slide.current{opacity:1; visibility:visible;}
+
+/* running head + counter */
+.rh{
+  display:flex; justify-content:space-between; align-items:baseline; gap:24px;
+  font-family:var(--mono); font-size:17px; letter-spacing:.22em; text-transform:uppercase;
+  color:var(--dim); padding-bottom:16px; border-bottom:1px solid var(--grid); flex:none;
+}
+.rh .rh-sec{color:var(--muted);}
+.counter{
+  position:absolute; right:104px; bottom:34px; font-family:var(--mono); font-size:16px;
+  letter-spacing:.16em; color:var(--dim); font-variant-numeric:tabular-nums;
+}
+.body{flex:1; display:flex; flex-direction:column; justify-content:center; min-height:0; padding:34px 0 8px;}
+.body.top{justify-content:flex-start;}
+
+/* warm bloom, borrowed from the sample's cover */
+.glow::before{
+  content:""; position:absolute; inset:0; pointer-events:none;
+  background:
+    radial-gradient(1100px 760px at 6% 108%, rgba(255,106,85,.17), transparent 62%),
+    radial-gradient(820px 560px at 99% -6%, rgba(242,184,75,.10), transparent 60%);
+}
+.glow > *{position:relative;}
+
+/* ============================================================
+   TYPE
+   ============================================================ */
+.eyebrow{
+  font-family:var(--mono); font-size:19px; letter-spacing:.26em; text-transform:uppercase;
+  color:var(--coral); margin-bottom:22px;
+}
+.eyebrow.m{color:var(--muted);}
+h1{font-size:126px; line-height:.98; font-weight:700; letter-spacing:-.035em;}
+h2{font-size:70px; line-height:1.04; font-weight:700; letter-spacing:-.028em;}
+h2.big{font-size:104px; line-height:1.01;}
+h2 .ac{color:var(--coral);}
+.lead{font-size:31px; line-height:1.5; color:var(--muted); max-width:60ch;}
+.lead b, .lead strong{color:var(--ink); font-weight:600;}
+.lead .ac{color:var(--coral);}
+.mono-note{font-family:var(--mono); font-size:16.5px; line-height:1.6; color:var(--dim); letter-spacing:.01em;}
+.hair{height:1px; background:var(--grid); border:0;}
+.kicker{font-size:33px; line-height:1.35; font-weight:600; letter-spacing:-.012em;}
+.kicker .ac{color:var(--coral);}
+
+/* ============================================================
+   COMPONENTS
+   ============================================================ */
+.card{
+  background:var(--panel); border:1px solid var(--grid); border-radius:var(--r);
+  padding:26px 28px; min-width:0;
+}
+.card.tint{background:linear-gradient(180deg, rgba(255,106,85,.07), rgba(255,106,85,.02)); border-color:rgba(255,106,85,.42);}
+.card h3{font-size:27px; font-weight:600; letter-spacing:-.012em; margin-bottom:10px;}
+.card p{font-size:20.5px; line-height:1.52; color:var(--muted);}
+.card p + p{margin-top:10px;}
+.card p .ac{color:var(--ink); font-weight:600;}
+.tag{
+  font-family:var(--mono); font-size:14.5px; letter-spacing:.2em; text-transform:uppercase;
+  color:var(--muted); display:block; margin-bottom:12px;
+}
+.cards{display:grid; gap:22px;}
+.c2{grid-template-columns:1fr 1fr;}
+.c3{grid-template-columns:repeat(3,1fr);}
+.c4{grid-template-columns:repeat(4,1fr);}
+
+/* accent-numbered list (sample PDF checklist) */
+.numlist{list-style:none; display:flex; flex-direction:column; gap:22px;}
+.numlist li{display:grid; grid-template-columns:52px 1fr; align-items:start;}
+.numlist .n{font-family:var(--mono); font-size:23px; font-weight:600; color:var(--coral); line-height:1.3;}
+.numlist h3{font-size:29px; font-weight:600; letter-spacing:-.01em; margin-bottom:7px;}
+.numlist p{font-size:21px; line-height:1.5; color:var(--muted); max-width:88ch;}
+
+/* strip = punchline panel with accent edge */
+.strip{
+  background:var(--panel); border:1px solid var(--grid); border-left:3px solid var(--coral);
+  border-radius:10px; padding:22px 28px;
+}
+.strip.teal{border-left-color:var(--teal);}
+
+/* quote card */
+.quote{
+  background:var(--panel); border:1px solid var(--grid); border-left:3px solid var(--coral);
+  border-radius:10px; padding:26px 30px;
+}
+.quote q{font-size:25px; line-height:1.46; font-weight:600; quotes:'"' '"';}
+.quote .cite{display:block; margin-top:14px; font-family:var(--mono); font-size:15px;
+  letter-spacing:.13em; text-transform:uppercase; color:var(--coral); opacity:.9;}
+
+/* stat tiles */
+.tiles{display:flex; gap:22px;}
+.tile{
+  background:var(--panel); border:1px solid var(--grid); border-radius:var(--r);
+  padding:22px 26px; flex:1;
+}
+.tile .v{font-size:62px; font-weight:700; letter-spacing:-.035em; color:var(--coral); line-height:1;}
+.tile .k{font-family:var(--mono); font-size:14.5px; letter-spacing:.18em; text-transform:uppercase;
+  color:var(--muted); margin-top:12px; line-height:1.5;}
+
+/* mono table (sample PDF) */
+table{width:100%; border-collapse:collapse;}
+th{
+  font-family:var(--mono); font-size:15px; letter-spacing:.2em; text-transform:uppercase;
+  color:var(--muted); font-weight:400; text-align:left; padding:0 20px 13px 0;
+  border-bottom:1px solid var(--grid);
+}
+td{padding:17px 20px 17px 0; border-bottom:1px solid rgba(34,42,52,.7); vertical-align:top;
+  font-size:21px; line-height:1.45; color:var(--muted);}
+tr:last-child td{border-bottom:0;}
+td .nm{color:var(--ink); font-weight:600; display:block;}
+td.mono{font-family:var(--mono); font-size:18px; color:var(--coral); white-space:nowrap;}
+
+/* code / env-var lines */
+code, .code{font-family:var(--mono); font-size:19px; color:var(--ink);
+  background:rgba(255,106,85,.10); border:1px solid rgba(255,106,85,.22);
+  border-radius:6px; padding:2px 8px; white-space:nowrap;}
+.code.plain{background:rgba(122,140,166,.10); border-color:rgba(122,140,166,.26); color:var(--ink);}
+
+/* effort dial pills */
+.dial{display:flex; gap:10px; align-items:stretch; margin-top:6px;}
+.pill{
+  font-family:var(--mono); font-size:17px; letter-spacing:.06em; color:var(--muted);
+  border:1px solid var(--grid); border-radius:999px; padding:9px 18px; background:rgba(255,255,255,.015);
+}
+.pill.on{color:var(--coral); border-color:rgba(255,106,85,.55); background:rgba(255,106,85,.08);}
+.pill.max{color:var(--ink);}
+
+/* delete / add rows */
+.del{display:flex; flex-direction:column; gap:14px;}
+.del .row{
+  display:grid; grid-template-columns:40px 1fr; gap:4px; align-items:start;
+  background:var(--panel); border:1px solid var(--grid); border-radius:10px; padding:17px 22px;
+  position:relative; overflow:hidden;
+}
+.del .row .mk{font-family:var(--mono); font-size:22px; line-height:1.25; color:var(--coral);}
+.del .row.add{border-color:rgba(69,214,196,.38); background:rgba(69,214,196,.05);}
+.del .row.add .mk{color:var(--teal);}
+.del .t{font-size:22.5px; line-height:1.3; color:var(--muted); text-decoration:line-through;
+  text-decoration-color:rgba(255,106,85,.75); text-decoration-thickness:2px;}
+.del .row.add .t{text-decoration:none; color:var(--ink); font-weight:600;}
+.del .why{font-size:19px; line-height:1.45; color:var(--dim); margin-top:6px;}
+.del .row.add .why{color:var(--muted);}
+
+/* step row (dynamic workflows) */
+.steps{display:flex; align-items:stretch; gap:0;}
+.steps .st{
+  flex:1; background:var(--panel); border:1px solid var(--grid); border-radius:12px;
+  padding:22px 22px 24px; min-width:0;
+}
+.steps .st .sn{font-family:var(--mono); font-size:15px; letter-spacing:.2em; color:var(--coral); display:block; margin-bottom:12px;}
+.steps .st p{font-size:20.5px; line-height:1.45; color:var(--ink);}
+.steps .st.dim p{color:var(--muted);}
+.steps .ar{display:flex; align-items:center; justify-content:center; width:56px; flex:none;
+  color:var(--coral); font-size:28px; opacity:.75;}
+
+/* act cards */
+.acts{display:grid; grid-template-columns:repeat(4,1fr); gap:20px;}
+.act{background:var(--panel); border:1px solid var(--grid); border-radius:var(--r); padding:24px 24px 26px;
+  display:flex; flex-direction:column; min-width:0;}
+.act .an{font-size:58px; font-weight:700; letter-spacing:-.04em; color:var(--coral); line-height:.9; opacity:.9;}
+.act h3{font-size:23.5px; margin:14px 0 10px; letter-spacing:-.008em;}
+.act p{font-size:19px; line-height:1.48; color:var(--muted);}
+.act .meta{font-family:var(--mono); font-size:14px; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--dim); margin-top:auto; padding-top:16px;}
+.act.live{border-color:rgba(255,106,85,.42); background:linear-gradient(180deg, rgba(255,106,85,.07), rgba(255,106,85,.02));}
+
+/* model lineup cards */
+.mcard{
+  background:var(--panel); border:1px solid var(--grid); border-radius:var(--r);
+  padding:0 0 26px; overflow:hidden; display:flex; flex-direction:column;
+}
+.mcard .bar{height:3px; background:var(--c);}
+.mcard .in{padding:24px 26px 0; display:flex; flex-direction:column; flex:1;}
+.mcard .cls{font-family:var(--mono); font-size:14px; letter-spacing:.18em; text-transform:uppercase; color:var(--c);}
+.mcard h3{font-size:37px; font-weight:700; letter-spacing:-.025em; margin:12px 0 2px;}
+.mcard .price{font-family:var(--mono); font-size:19px; color:var(--ink); margin:12px 0 4px;}
+.mcard .price small{color:var(--muted); font-size:15.5px;}
+.mcard p{font-size:20px; line-height:1.48; color:var(--muted); margin-top:14px;}
+.mcard .role{margin-top:auto; padding-top:18px; font-family:var(--mono); font-size:14.5px;
+  letter-spacing:.16em; text-transform:uppercase; color:var(--c); opacity:.95;}
+
+/* zone cards */
+.zone{border-radius:var(--r); border:1px solid var(--grid); padding:28px 30px; min-width:0;
+  display:flex; flex-direction:column;}
+.zone.fan{background:linear-gradient(180deg, rgba(69,214,196,.075), rgba(69,214,196,.015)); border-color:rgba(69,214,196,.34);}
+.zone.jud{background:linear-gradient(180deg, rgba(255,106,85,.075), rgba(255,106,85,.015)); border-color:rgba(255,106,85,.34);}
+.zone .zt{font-family:var(--mono); font-size:16px; letter-spacing:.24em; text-transform:uppercase;}
+.zone.fan .zt{color:var(--teal);} .zone.jud .zt{color:var(--coral);}
+.zone h3{font-size:31px; font-weight:600; letter-spacing:-.015em; margin:14px 0 12px;}
+.zone p{font-size:21px; line-height:1.5; color:var(--muted);}
+.zone p + p{margin-top:11px;}
+.zone .who{margin-top:auto; padding-top:18px; font-family:var(--mono); font-size:15.5px; color:var(--dim);}
+
+/* links slide */
+.links{display:grid; grid-template-columns:1fr 1fr; gap:0 56px;}
+.links .lk{display:flex; flex-direction:column; gap:5px; padding:20px 0; border-bottom:1px solid var(--grid);}
+.links .lk .n{font-size:23px; font-weight:600;}
+.links .lk .u{font-family:var(--mono); font-size:18px; color:var(--coral); word-break:break-all;}
+
+/* takeaways */
+.take{display:flex; flex-direction:column; gap:34px;}
+.take li{display:grid; grid-template-columns:78px 1fr; align-items:baseline; list-style:none;}
+.take .n{font-family:var(--mono); font-size:34px; font-weight:600; color:var(--coral);}
+.take .t{font-size:44px; line-height:1.24; font-weight:600; letter-spacing:-.022em;}
+.take .t .s{display:block; font-size:26px; font-weight:400; color:var(--muted); margin-top:10px; letter-spacing:0;}
+
+.hintbar{
+  position:absolute; left:104px; bottom:34px; font-family:var(--mono); font-size:15px;
+  letter-spacing:.14em; text-transform:uppercase; color:var(--dim);
+}
+
+/* ============================================================
+   SPEAKER NOTES  (hidden; "n" toggles)
+   ============================================================ */
+.slide > aside{display:none;}
+body.notes .slide.current > aside{
+  display:block; position:absolute; left:0; right:0; bottom:0; max-height:46%; overflow:auto;
+  background:rgba(10,13,17,.975); border-top:1px solid var(--coral);
+  padding:22px 104px 26px; z-index:40; text-align:left;
+  box-shadow:0 -20px 50px rgba(0,0,0,.6);
+}
+.slide > aside b{display:block; font-family:var(--mono); font-size:14px; letter-spacing:.22em;
+  text-transform:uppercase; color:var(--coral); margin-bottom:10px; font-weight:400;}
+.slide > aside ul{margin:0; padding-left:22px;}
+.slide > aside li{font-size:19.5px; line-height:1.5; color:var(--ink); margin-bottom:7px;}
+.slide > aside li i{color:var(--muted); font-style:normal;}
+.slide > aside p{font-size:19.5px; line-height:1.5; color:var(--ink); margin-bottom:8px;}
+
+/* ============================================================
+   OVERVIEW GRID  ("o" / Escape)
+   ============================================================ */
+body.ov{overflow:auto;}
+body.ov #deck{
+  position:static; left:auto; top:auto; transform:none !important;
+  width:auto; height:auto; min-height:100vh;
+  display:grid; grid-template-columns:repeat(5, var(--ovw,320px)); justify-content:center;
+  gap:16px; padding:34px 28px 40px; counter-reset:ovc;
+}
+body.ov .cell{
+  display:block; position:relative; width:var(--ovw,320px); height:calc(var(--ovw,320px) * 0.5625);
+  overflow:hidden; border:1px solid var(--grid); border-radius:8px; cursor:pointer; background:var(--bg);
+}
+body.ov .cell:hover{border-color:var(--muted);}
+body.ov .cell.here{border-color:var(--coral); box-shadow:0 0 0 2px rgba(255,106,85,.32);}
+body.ov .cell::after{
+  counter-increment:ovc; content:counter(ovc); position:absolute; left:0; top:0; z-index:3;
+  font-family:var(--mono); font-size:11px; letter-spacing:.1em; color:var(--muted);
+  background:rgba(7,9,12,.86); padding:3px 7px; border-right:1px solid var(--grid); border-bottom:1px solid var(--grid);
+  border-radius:8px 0 6px 0;
+}
+body.ov .slide{
+  opacity:1 !important; visibility:visible !important; transition:none;
+  transform:scale(var(--ovs,.1667)); transform-origin:top left; pointer-events:none;
+}
+body.ov .slide > aside{display:none !important;}
+body.ov .counter, body.ov .hintbar{opacity:.9;}
+#ovhint{
+  display:none; position:fixed; right:22px; bottom:16px; font-family:var(--mono); font-size:13px;
+  letter-spacing:.16em; text-transform:uppercase; color:var(--dim); z-index:60;
+}
+body.ov #ovhint{display:block;}
+
+/* ============================================================
+   THE MAP — ported from opus-5-cost-capability-map.html (scoped)
+   ============================================================ */
+#map-head{display:flex; justify-content:space-between; align-items:flex-end; gap:34px; flex:none;}
+#map-head .eyebrow{margin-bottom:14px;}
+#map-head h2{font-size:46px;}
+#map-head .sub{color:var(--muted); font-size:21px; margin-top:9px;}
+#map-legend{display:flex; gap:14px 20px; flex-wrap:wrap; font-size:18px; align-items:center;
+  justify-content:flex-end; max-width:560px;}
+#map-legend span{display:flex; align-items:center; gap:9px; color:var(--muted);}
+#map-legend .dot{width:13px; height:13px; border-radius:50%;}
+#map-wrap .ghost-legend{display:none;}
+#map-wrap.show-ghosts .ghost-legend{display:flex;}
+#map-toggle{
+  background:transparent; color:var(--muted); border:1px solid var(--grid); border-radius:8px;
+  padding:9px 16px; font-size:17px; cursor:pointer; font-family:var(--mono); transition:all .15s;
+}
+#map-toggle:hover, #map-toggle:focus-visible{color:var(--ink); border-color:var(--muted); outline:none;}
+#map-wrap.show-ghosts #map-toggle{color:var(--ink); border-color:var(--gpt);}
+#map-plot{flex:1; min-height:0; margin-top:16px; position:relative;}
+#map-plot svg{width:100%; height:100%; display:block;}
+#map-wrap .axis-label{fill:var(--muted); font-size:13.5px; font-family:var(--mono);}
+#map-wrap .tick{fill:var(--muted); font-size:12.5px; font-family:var(--mono);}
+#map-wrap .pt{cursor:pointer; transition:r .15s;}
+#map-wrap .curve{fill:none; stroke-width:2.6; opacity:.88;}
+#map-wrap .plabel{font-size:12.5px; font-family:var(--mono); fill:var(--muted);}
+#map-wrap .mlabel{font-size:15px; font-weight:600;}
+#map-wrap .zone-label{font-size:12.5px; font-family:var(--mono); letter-spacing:.18em; opacity:.6;}
+#map-wrap .callout{font-size:14px; fill:var(--ink); opacity:.92;}
+#map-ghosts{display:none;}
+#map-wrap.show-ghosts #map-ghosts{display:block;}
+#map-ghosts .curve{opacity:.5;}
+#map-ghosts .pt{opacity:.6;}
+#map-ghosts .mlabel{opacity:.7; font-weight:500;}
+#map-tooltip{
+  position:absolute; pointer-events:none; background:var(--panel); border:1px solid var(--grid);
+  border-radius:9px; padding:13px 15px; font-size:17px; line-height:1.45; max-width:360px;
+  opacity:0; transition:opacity .12s; box-shadow:0 10px 30px rgba(0,0,0,.55); z-index:5;
+}
+#map-tooltip b{display:block; margin-bottom:5px;}
+#map-foot{
+  margin-top:14px; padding-top:12px; border-top:1px solid var(--grid); flex:none;
+  display:flex; justify-content:space-between; gap:22px; align-items:center;
+  font-size:15.5px; color:var(--dim); line-height:1.45;
+}
+#map-foot .chip{font-family:var(--mono); border:1px solid var(--grid); border-radius:7px;
+  padding:7px 11px; white-space:nowrap; font-size:14.5px;}
+
+/* ============================================================
+   PRINT — one 16:9 page per slide (Chromium print-to-PDF)
+   ============================================================ */
+@media print{
+  @page{size:20in 11.25in; margin:0;}
+  html,body{overflow:visible !important; height:auto !important; background:var(--bg) !important;}
+  #deck{position:static !important; transform:none !important; width:1920px !important;
+    height:auto !important; display:block !important; padding:0 !important;}
+  .cell{display:block !important; width:auto !important; height:auto !important;
+    border:0 !important; border-radius:0 !important; overflow:visible !important;}
+  .cell::after{display:none !important;}
+  .slide{position:relative !important; inset:auto !important; opacity:1 !important;
+    visibility:visible !important; transform:none !important; break-after:page; page-break-after:always;
+    width:1920px !important; height:1080px !important; overflow:hidden !important;}
+  .slide:last-of-type{break-after:auto; page-break-after:auto;}
+  .slide > aside, body.notes .slide.current > aside{display:none !important;}
+  .hintbar, #ovhint{display:none !important;}
+  *{-webkit-print-color-adjust:exact; print-color-adjust:exact;}
+}
+</style>
+</head>
+<body>
+<div id="deck">
+
+<!-- ============================== 1 · TITLE ============================== -->
+<div class="cell"><section class="slide glow">
+  <div class="rh"><span class="rh-sec">Opus 5 · July 2026</span><span>Dustin</span></div>
+  <div class="body">
+    <div class="eyebrow">Opus 5 · July 2026</div>
+    <h1>Making the Most<br>of Claude <span style="color:var(--coral)">Opus&nbsp;5</span></h1>
+    <hr class="hair" style="margin:52px 0 34px; max-width:760px;">
+    <div class="lead" style="font-size:34px;"><b>Dustin</b> &nbsp;·&nbsp; 30 minutes, one live demo, three acts</div>
+    <div class="mono-note" style="margin-top:22px; font-size:18px; letter-spacing:.12em; text-transform:uppercase;">
+      For software engineers — plus platform engineers &amp; designers
+    </div>
+  </div>
+  <div class="hintbar">→ / space advance &nbsp;·&nbsp; N notes &nbsp;·&nbsp; O overview &nbsp;·&nbsp; F fullscreen</div>
+  <div class="counter"></div>
+  <aside>
+    <b>Speaker notes · open</b>
+    <ul>
+      <li>Set the frame in one line: this release is about the <i>economics of daily use</i> — near-frontier intelligence you can afford to run all day.</li>
+      <li>Deck mechanics for me: <i>N</i> toggles these notes, <i>O</i> is the slide grid, <i>F</i> fullscreen. Slide 7 (the map) and slide 14 (demo hub) are the two slides I stay on longest.</li>
+      <li>Timing: hook 2 · lineup 2 · what changed 3 · map 3 · checklist 3 · workflows 5 · demo 8 · quick hits 2 · close 2.</li>
+    </ul>
+  </aside>
+</section></div>
+
+<!-- ============================== 2 · HOOK ============================== -->
+<div class="cell"><section class="slide glow">
+  <div class="rh"><span class="rh-sec">The hook</span><span>Opus 5 · July 2026</span></div>
+  <div class="body">
+    <div class="eyebrow">Five days ago</div>
+    <h2 class="big">It doubled its predecessor's<br>hardest-benchmark score.<br><span class="ac">The price didn't move.</span></h2>
+    <div class="lead" style="margin-top:44px; max-width:74ch;">
+      Opus 5 more than doubles Opus 4.8's Frontier-Bench score — at the same
+      <b>$5 / $25</b> per MTok, and at a lower cost <i>per task</i>.
+    </div>
+    <div class="strip" style="margin-top:40px; max-width:1140px;">
+      <span class="tag" style="color:var(--coral); margin-bottom:9px;">Cold open · told, not shown</span>
+      <div class="kicker" style="font-size:28px; font-weight:500; color:var(--ink);">
+        A drawing of a machine part it had no way to look at. So it built its own eyes.
+      </div>
+    </div>
+  </div>
+  <div class="counter"></div>
+  <aside>
+    <b>Speaker notes · the FreeCAD cold open</b>
+    <ul>
+      <li>Tell it, don't show it. Task: rebuild a machine part in FreeCAD from a drawing — with no ability to <i>view</i> the image.</li>
+      <li>Opus 5 wrote its own computer-vision pipeline to extract the geometry from raw pixels, then rebuilt the part. <b>No competing model solved it in five attempts.</b></li>
+      <li>Land the framing after the laugh: near-frontier intelligence at a price you can leave running all day. That's the whole talk.</li>
+    </ul>
+  </aside>
+</section></div>
+
+<!-- ============================== 3 · LINEUP ============================== -->
+<div class="cell"><section class="slide">
+  <div class="rh"><span class="rh-sec">The lineup</span><span>60 seconds</span></div>
+  <div class="body">
+    <div class="eyebrow">The mid-2026 lineup in 60 seconds</div>
+    <h2 style="margin-bottom:38px;">Four models, one dial each.</h2>
+    <div class="cards c4" style="align-items:stretch;">
+      <div class="mcard" style="--c:var(--fable)">
+        <div class="bar"></div>
+        <div class="in">
+          <span class="cls">Mythos class</span>
+          <h3>Fable 5</h3>
+          <div class="price">$10 / $50 <small>per MTok</small></div>
+          <p>Sits above Opus. Keeps SWE-bench&nbsp;Pro, factual breadth, creative polish.</p>
+          <div class="role">The ceiling</div>
+        </div>
+      </div>
+      <div class="mcard tint" style="--c:var(--opus5)">
+        <div class="bar"></div>
+        <div class="in">
+          <span class="cls">Jul 24 · new</span>
+          <h3>Opus 5</h3>
+          <div class="price">$5 / $25 <small>unchanged from 4.8</small></div>
+          <p>Near-Fable intelligence at half Fable's price. Now the default Opus in Claude&nbsp;Code.</p>
+          <div class="role">The workhorse</div>
+        </div>
+      </div>
+      <div class="mcard" style="--c:var(--sonnet)">
+        <div class="bar"></div>
+        <div class="in">
+          <span class="cls">Jun 30</span>
+          <h3>Sonnet 5</h3>
+          <div class="price">$2 / $10 <small>intro to Aug 31, then $3/$15</small></div>
+          <p>Most agentic Sonnet yet — performs close to Opus&nbsp;4.8.</p>
+          <div class="role">The implementer</div>
+        </div>
+      </div>
+      <div class="mcard" style="--c:var(--haiku)">
+        <div class="bar"></div>
+        <div class="in">
+          <span class="cls">Legacy · load-bearing</span>
+          <h3>Haiku 4.5</h3>
+          <div class="price">Efficiency tier</div>
+          <p>Parallel execution, subagents, latency-sensitive paths.</p>
+          <div class="role">The fan-out</div>
+        </div>
+      </div>
+    </div>
+    <div class="strip" style="margin-top:38px;">
+      <div class="kicker">Last month's flagship capability is now the <span class="ac">mid-tier price</span>.</div>
+    </div>
+  </div>
+  <div class="counter"></div>
+  <aside>
+    <b>Speaker notes · lineup</b>
+    <ul>
+      <li>Sixty seconds, not three minutes. The only load-bearing facts: Opus 5 is half Fable's price, Sonnet 5 performs near Opus 4.8, Haiku is still the fan-out tier.</li>
+      <li>Opus 5's price is <i>unchanged from 4.8</i> — that's the fact the next slide cashes in.</li>
+      <li>If asked about Fable: it's Mythos class, still holds real edges (SWE-bench Pro +0.8, factual knowledge, creative/visual polish). Slide 7 shows the overlap.</li>
+    </ul>
+  </aside>
+</section></div>
+
+<!-- ============================== 4 · OPUS 5 vs 4.8 ============================== -->
+<div class="cell"><section class="slide">
+  <div class="rh"><span class="rh-sec">Opus 5 vs 4.8</span><span>What actually changed</span></div>
+  <div class="body">
+    <div class="eyebrow">Opus 5 vs Opus 4.8</div>
+    <h2 style="margin-bottom:34px;">What actually changed.</h2>
+    <div class="cards" style="grid-template-columns:1.34fr 1fr 1fr; gap:22px;">
+      <div class="card tint" style="grid-column:span 1;">
+        <span class="tag" style="color:var(--coral)">Effort · now a 5-level dial</span>
+        <div class="dial">
+          <span class="pill">low</span><span class="pill">med</span>
+          <span class="pill on">high</span><span class="pill">xhigh</span><span class="pill max">max</span>
+        </div>
+        <p style="margin-top:16px;">Set via <code>output_config.effort</code>. <span class="ac">high</span> is the API default — and the levels were recalibrated, so 4.8's settings don't carry over.</p>
+      </div>
+      <div class="card">
+        <span class="tag">Thinking</span>
+        <h3>On by default</h3>
+        <p>Can only be disabled at effort ≤ high. Thinking-on at <i>low</i> usually beats thinking-off at similar cost.</p>
+      </div>
+      <div class="card">
+        <span class="tag">Context</span>
+        <h3>1M tokens</h3>
+        <p>Default <i>and</i> max. Behavior stays consistent all the way through the window.</p>
+      </div>
+      <div class="card">
+        <span class="tag">Speed</span>
+        <h3>Fast mode</h3>
+        <p>~2.5× the speed at 2× the price. Interactive paths only — not your batch jobs.</p>
+      </div>
+      <div class="card">
+        <span class="tag">Benchmarks</span>
+        <h3>New SOTA</h3>
+        <p>Frontier-Bench and GDPval-AA. Within <span class="ac">0.5%</span> of Fable 5's CursorBench peak at half the cost.</p>
+      </div>
+      <div class="card">
+        <span class="tag">Behavior</span>
+        <h3>Verifies itself</h3>
+        <p>Checks its own work unprompted, iterates until it succeeds, pushes back on flawed designs. Review accuracy holds even at low effort.</p>
+      </div>
+    </div>
+  </div>
+  <div class="counter"></div>
+  <aside>
+    <b>Speaker notes · what changed</b>
+    <ul>
+      <li>The dial is the spine of the talk — everything after this slide is about who gets which setting. Don't dwell on the other five cards.</li>
+      <li>"Verifies itself, unprompted" is the fact that makes slide 10's delete list possible. Plant it here, collect it there.</li>
+      <li>Benchmark detail if pressed: &gt;2× Opus 4.8's Frontier-Bench at lower cost per task; CursorBench 3.2 70.1 vs Fable's 70.4.</li>
+      <li>Fast mode caveat: 2× price means it is an interactive-latency tool, not a throughput tool.</li>
+    </ul>
+  </aside>
+</section></div>
+
+<!-- ============================== 5 · FIELD STORIES ============================== -->
+<div class="cell"><section class="slide">
+  <div class="rh"><span class="rh-sec">Field stories</span><span>Pick one</span></div>
+  <div class="body">
+    <div class="eyebrow">From the field</div>
+    <h2 style="margin-bottom:40px;">Two stories, one behavior.</h2>
+    <div class="cards c2" style="align-items:stretch;">
+      <div class="card" style="padding:34px 36px;">
+        <span class="tag" style="color:var(--coral)">Story A · the package-manager bug</span>
+        <h3 style="font-size:33px; margin-bottom:16px;">It found the root cause. The other model found the symptom.</h3>
+        <p style="font-size:22px;">Opus 5 fixed an edge case the community's own patch had missed.</p>
+        <p style="font-size:22px;">A competing model fixed the surface symptom — and reported it resolved.</p>
+      </div>
+      <div class="card" style="padding:34px 36px;">
+        <span class="tag" style="color:var(--coral)">Story B · the trading-firm feed</span>
+        <h3 style="font-size:33px; margin-bottom:16px;">No feed to test against, so it built one.</h3>
+        <p style="font-size:22px;">A market data feed for a new exchange, in one session.</p>
+        <p style="font-size:22px;">With no live feed to validate against, it wrote its own test harness to check its parsing.</p>
+      </div>
+    </div>
+    <div class="strip" style="margin-top:40px;">
+      <div class="kicker">Both stories are the same story: <span class="ac">it looks for the verifier</span>.</div>
+    </div>
+  </div>
+  <div class="counter"></div>
+  <aside>
+    <b>Speaker notes · tell ONE of these, 60 seconds</b>
+    <ul>
+      <li><b>Pick one on the night.</b> Engineer-heavy room → Story A (root cause vs symptom). Platform/infra-heavy room → Story B (built its own test harness).</li>
+      <li>Don't read the card. The card is the audience's anchor; you tell the version with the detail in it.</li>
+      <li>Land on the shared moral: unprompted verification. That's what earns the delete list on slide 10 — and it sets up the honest counterweight next.</li>
+    </ul>
+  </aside>
+</section></div>
+
+<!-- ============================== 6 · COUNTERWEIGHT ============================== -->
+<div class="cell"><section class="slide">
+  <div class="rh"><span class="rh-sec">The honest counterweight</span><span>CodeRabbit, early review</span></div>
+  <div class="body">
+    <div class="eyebrow">The honest counterweight</div>
+    <h2 style="margin-bottom:22px;">A stronger builder<br>than reviewer.</h2>
+    <div class="lead" style="margin-bottom:38px;">CodeRabbit's early review of Opus 5, running it across real review workloads.</div>
+    <div class="cards" style="grid-template-columns:1fr 1fr; gap:26px; align-items:stretch;">
+      <div class="card" style="padding:30px 32px;">
+        <span class="tag" style="color:var(--teal)">What got better</span>
+        <p style="font-size:22.5px;">Much better <span class="ac">design judgment</span> than 4.8.</p>
+        <p style="font-size:22.5px;">Noticeably <span class="ac">"less anxious"</span> — fewer hedges, fewer defensive re-reads.</p>
+      </div>
+      <div class="card" style="padding:30px 32px;">
+        <span class="tag" style="color:var(--coral)">What it costs</span>
+        <div class="tiles" style="gap:18px; margin-top:4px;">
+          <div class="tile" style="background:transparent; border:0; padding:0;">
+            <div class="v">~50%</div><div class="k">more read<br>per review call</div>
+          </div>
+          <div class="tile" style="background:transparent; border:0; padding:0;">
+            <div class="v">~65%</div><div class="k">more written<br>per review call</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="strip" style="margin-top:38px;">
+      <div class="kicker">Verbosity is now a line item. <span class="ac">Which is why the fix is a delete list, not an add list.</span></div>
+    </div>
+  </div>
+  <div class="counter"></div>
+  <aside>
+    <b>Speaker notes · counterweight</b>
+    <ul>
+      <li>Engineers trust a talk more after one honest negative. Say the numbers plainly: reads ~50% more and writes ~65% more per review call than baseline.</li>
+      <li>Nuance worth adding: review <i>accuracy</i> holds even at low effort — so review is often a place to turn the dial <i>down</i>, not to switch models.</li>
+      <li>This is the bridge: verbosity costs money → slide 10's ADD line includes explicit conciseness instructions and delegation caps.</li>
+    </ul>
+  </aside>
+</section></div>
+
+<!-- ============================== 7 · THE MAP ============================== -->
+<div class="cell"><section class="slide" id="s-map" style="padding:44px 72px 56px;">
+  <div class="rh" style="font-size:16px;"><span class="rh-sec">The map</span><span>Cost × capability, July 2026</span></div>
+  <div class="body top" id="map-wrap" style="padding:22px 0 0;">
+    <div id="map-head">
+      <div>
+        <div class="eyebrow">The map · cost vs output</div>
+        <h2>Effort moves you along a curve.<br><span class="ac">Model choice jumps between curves.</span></h2>
+        <div class="sub">Each dot is one (model, effort) pair. Hover any dot for the claim behind its position.</div>
+      </div>
+      <div id="map-legend">
+        <span><i class="dot" style="background:var(--haiku)"></i>Haiku 4.5</span>
+        <span><i class="dot" style="background:var(--sonnet)"></i>Sonnet 5</span>
+        <span><i class="dot" style="background:var(--opus48); outline:2px dashed var(--opus48); outline-offset:2px;"></i>Opus 4.8 (ref)</span>
+        <span><i class="dot" style="background:var(--opus5)"></i>Opus 5</span>
+        <span><i class="dot" style="background:var(--fable)"></i>Fable 5</span>
+        <span class="ghost-legend"><i class="dot" style="background:var(--gpt)"></i>GPT-5.6</span>
+        <span class="ghost-legend"><i class="dot" style="background:var(--gemini)"></i>Gemini 3</span>
+        <span class="ghost-legend"><i class="dot" style="background:var(--grok)"></i>Grok 4.5</span>
+        <span class="ghost-legend"><i class="dot" style="background:var(--deepseek)"></i>DeepSeek v4</span>
+        <button id="map-toggle" aria-pressed="false">show other labs</button>
+      </div>
+    </div>
+    <div id="map-plot">
+      <svg id="map-chart" preserveAspectRatio="xMidYMid meet" role="img"
+           aria-label="Cost versus capability curves for Claude models across effort levels"></svg>
+      <div id="map-tooltip"></div>
+    </div>
+    <div id="map-foot">
+      <div>Positions are <b>illustrative</b> — synthesized from published pricing, Anthropic benchmark claims, and Artificial Analysis Intelligence-vs-Cost data. Per-effort scores aren't published.</div>
+      <div class="chip">tune effort before you switch models</div>
+    </div>
+  </div>
+  <div class="counter" style="right:72px;"></div>
+  <aside>
+    <b>Speaker notes · the map (3 min, the centerpiece)</b>
+    <ul>
+      <li>One visual carries the whole argument: each model is a <b>curve</b> through cost/output space, not a point. Effort moves you along the curve; model choice jumps you between curves.</li>
+      <li>Four readings, in this order: <i>(1)</i> Opus 5 low/medium land near where Opus 4.8 <i>high</i> used to sit — for less. <i>(2)</i> Sonnet 5 at xhigh approaches Opus-4.8-class cost — at that point jump tiers instead. <i>(3)</i> Opus 5 max is <i>not</i> always better than xhigh — Frontier-Bench peaks at xhigh. <i>(4)</i> Haiku sits far left: the fan-out zone.</li>
+      <li>Top of the market is an <b>overlap, not a hierarchy</b>: Opus 5 (max) at 61 on the AA Intelligence Index — highest of 170 tracked models, one point above Fable — plus &gt;100 Elo on GDPval-AA v2 and +9.6 on Frontier-Bench, at half the price. Fable keeps SWE-bench Pro (+0.8), factual knowledge, creative polish.</li>
+      <li><b>Live moment:</b> hover a dot or two (Opus 5 · max, Sonnet 5 · xhigh) — the tooltip carries the receipt. Save the <i>"show other labs"</i> click for slide 9.</li>
+      <li>Caveat if asked: cross-lab dials aren't apples-to-apples — comparisons normalize by token spend, not parameter names; several headline numbers are vendor-reported.</li>
+    </ul>
+  </aside>
+</section></div>
+
+<!-- ============================== 8 · THE TWO ZONES ============================== -->
+<div class="cell"><section class="slide">
+  <div class="rh"><span class="rh-sec">The two zones</span><span>What the shading means</span></div>
+  <div class="body">
+    <div class="eyebrow">The two zones</div>
+    <h2 style="margin-bottom:36px;">The fan-out zone is priced <span class="ac">per attempt</span>.<br>The judgment zone is priced <span class="ac">per mistake</span>.</h2>
+    <div class="cards c2" style="align-items:stretch; margin-bottom:32px;">
+      <div class="zone fan">
+        <span class="zt">Fan-out zone · left, teal</span>
+        <h3>Volume is the strategy.</h3>
+        <p>Haiku, DeepSeek-class, Sonnet at low effort.</p>
+        <p>Mechanical, parallelizable work: read a hundred files, grep, summarize, extract.</p>
+        <p><b style="color:var(--ink); font-weight:600;">Defining property:</b> you run many at once and can afford to waste some output — an irrelevant file read costs a fraction of a cent.</p>
+        <div class="who">= the <span style="color:var(--teal)">model: haiku</span> explorer, the mechanical nodes of a workflow</div>
+      </div>
+      <div class="zone jud">
+        <span class="zt">Judgment zone · right, coral</span>
+        <h3>Being wrong is the cost.</h3>
+        <p>Opus 5 at high / xhigh, Fable.</p>
+        <p>Root cause, architecture, interpreting a hundred subagent reports, final review.</p>
+        <p><b style="color:var(--ink); font-weight:600;">Defining property:</b> you run it once — a misdiagnosed root cause costs days, so 15–20× per task is good economics.</p>
+        <div class="who">= the orchestrator's seat</div>
+      </div>
+    </div>
+    <div class="strip">
+      <div class="kicker">Tune effort before you switch models. <span class="ac">Switch models when the curves cross.</span></div>
+      <div class="mono-note" style="margin-top:12px;">The unshaded middle — Sonnet 5, Opus 5 low/med — is deliberate: negotiable territory where curve-crossing and effort sweeps decide.</div>
+    </div>
+  </div>
+  <div class="counter"></div>
+  <aside>
+    <b>Speaker notes · "what's the shading?" (near-certain question)</b>
+    <ul>
+      <li><b>Fan-out zone (left, teal)</b> — the cheap end: Haiku, DeepSeek-class, Sonnet at low effort. For mechanical, parallelizable work: reading a hundred files, grep, summarize, extract. Defining property: you can run many instances at once and afford to waste some output — an irrelevant file read costs a fraction of a cent. <i>Volume is the strategy.</i> (= the <i>model: haiku</i> explorer agent, the mechanical nodes of a workflow.)</li>
+      <li><b>Judgment zone (right, coral)</b> — the expensive end: Opus 5 high/xhigh, Fable. For work where a single decision carries the consequences: root cause, architecture, interpreting a hundred subagent reports, final review. Defining property: you run it once and being wrong is expensive — a misdiagnosed root cause costs days, so 15–20× per task is good economics. (= the orchestrator's seat.)</li>
+      <li><b>The unshaded middle is deliberate</b> — Sonnet 5 and Opus 5 low/med are negotiable territory, decided by curve-crossing and effort sweeps on your own evals.</li>
+      <li>The sharp version: the router's real job is deciding which zone a task's <b>failure cost</b> lives in — not just how hard the task is.</li>
+    </ul>
+  </aside>
+</section></div>
+
+<!-- ============================== 9 · DON'T TAKE MY WORD FOR IT ============================== -->
+<div class="cell"><section class="slide">
+  <div class="rh"><span class="rh-sec">Cross-lab convergence</span><span>Don't take my word for it</span></div>
+  <div class="body">
+    <div class="eyebrow">Don't take my word for it</div>
+    <h2 style="margin-bottom:36px;">Every lab shipped a dial in 2026.</h2>
+    <div class="cards" style="grid-template-columns:1.06fr 1fr; gap:24px; align-items:stretch; margin-bottom:30px;">
+      <div class="card" style="padding:30px 32px;">
+        <span class="tag" style="color:var(--coral)">Artificial Analysis</span>
+        <h3 style="font-size:30px;">This map, at industry scale.</h3>
+        <p style="font-size:21.5px; margin-top:12px;">Intelligence Index vs Cost per Task — Pareto-frontier framing: <span class="ac">everything off the frontier is paying more for less</span>. Now literally on SF billboards.</p>
+        <p style="font-size:21.5px;">They plot effort levels as curves too: for any GPT-5.6 Terra effort level, a Luna or Sol level beats it. Same "curves cross" logic.</p>
+      </div>
+      <div class="card" style="padding:30px 32px;">
+        <span class="tag" style="color:var(--coral)">The convergence</span>
+        <table style="margin-top:2px;">
+          <tr><td class="mono" style="color:var(--gpt)">OpenAI</td><td>max reasoning + "ultra" parallel mode</td></tr>
+          <tr><td class="mono" style="color:var(--gemini)">Gemini</td><td>thinking levels + Deep&nbsp;Think</td></tr>
+          <tr><td class="mono" style="color:var(--grok)">Grok</td><td>an effort parameter</td></tr>
+          <tr><td class="mono">Anthropic</td><td>low · med · high · xhigh · max</td></tr>
+        </table>
+        <p style="font-size:21.5px; margin-top:18px; color:var(--ink);">"Which model?" became <span class="ac">"which model, at what effort?"</span></p>
+      </div>
+    </div>
+    <div class="strip">
+      <div class="kicker" style="display:flex; align-items:baseline; gap:22px; flex-wrap:wrap;">
+        <span style="font-family:var(--mono); font-size:44px; font-weight:700; color:var(--coral); letter-spacing:-.03em;">~5–10× / year</span>
+        <span style="font-size:29px;">Pareto-frontier price-performance improvement. This map is a snapshot of a curve sliding down-and-right, fast.</span>
+      </div>
+    </div>
+    <div class="mono-note" style="margin-top:20px;">Caveat: cross-lab dials aren't apples-to-apples — comparisons normalize by token spend, not parameter names. Several headline numbers are vendor-reported.</div>
+  </div>
+  <div class="counter"></div>
+  <aside>
+    <b>Speaker notes · cross-lab prior art</b>
+    <ul>
+      <li><b>Live moment:</b> jump back to slide 7 (press <i>7</i> in the overview, or arrow back) and hit <b>"show other labs"</b> — ghost curves for GPT-5.6, Gemini 3, Grok, DeepSeek appear. Say: "this isn't an Anthropic idea, it's where the whole industry landed."</li>
+      <li>Academic backing for the closing stat: Pareto-frontier price-performance is improving roughly 5–10× per year. Good place to say the map has a shelf life measured in months.</li>
+      <li>If challenged on rigor: cross-lab comparisons normalize by token spend, not parameter names; several headline numbers are vendor-reported. Say it before someone else does.</li>
+      <li>Grounding number if useful: 9 of the 13 models on AA's intelligence-price frontier are open-weights — the fan-out zone is contested territory.</li>
+    </ul>
+  </aside>
+</section></div>
+
+<!-- ============================== 10 · MIGRATION CHECKLIST ============================== -->
+<div class="cell"><section class="slide">
+  <div class="rh"><span class="rh-sec">Migration checklist</span><span>What to delete</span></div>
+  <div class="body">
+    <div class="eyebrow">Migration checklist</div>
+    <h2 style="margin-bottom:34px;">Delete these from your prompts.</h2>
+    <div class="cards" style="grid-template-columns:1.42fr 1fr; gap:36px; align-items:start;">
+      <div class="del">
+        <div class="row"><span class="mk">✕</span><div>
+          <div class="t">"Double-check your answer" · "verify with a subagent"</div>
+          <div class="why">Over-verification. Wasted tokens, no quality gain — it already verifies.</div>
+        </div></div>
+        <div class="row"><span class="mk">✕</span><div>
+          <div class="t">Legacy harness verification steps</div>
+          <div class="why">Same problem, wearing a config file.</div>
+        </div></div>
+        <div class="row"><span class="mk">✕</span><div>
+          <div class="t">"Only report high-severity issues"</div>
+          <div class="why">It obeys literally and under-reports. Ask for everything, filter in a second pass.</div>
+        </div></div>
+        <div class="row"><span class="mk">✕</span><div>
+          <div class="t">Effort defaults carried over from 4.8</div>
+          <div class="why">The levels were recalibrated. Re-run a sweep on your own evals.</div>
+        </div></div>
+        <div class="row add"><span class="mk">✓</span><div>
+          <div class="t">ADD instead: conciseness instructions · scope constraints · delegation caps · narration cadence</div>
+          <div class="why">The four things that got <i>more</i> valuable, not less.</div>
+        </div></div>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:26px;">
+        <div class="strip">
+          <div class="kicker" style="font-size:31px;">The model got more agentic,<br>so your prompts should get <span class="ac">less paranoid</span>.</div>
+        </div>
+        <div class="quote">
+          <q>Every six months, delete your CLAUDE.md, delete your skills, delete your hooks — see what the model does, and it might surprise you.</q>
+          <span class="cite">Boris Cherny · creator of Claude Code · YC Startup School 2026</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="counter"></div>
+  <aside>
+    <b>Speaker notes · the delete list</b>
+    <ul>
+      <li>This is the most immediately actionable slide in the deck. Tell people to screenshot it — then move on; don't narrate all five rows.</li>
+      <li>The one that surprises people: <i>"only report high-severity issues"</i> makes it under-report. It obeys literally. Ask for everything and filter in a second pass.</li>
+      <li>Cherny's line is the same advice with a schedule attached: instructions in your config were compensation for older models. Charge rent per line.</li>
+      <li>Tie back to slide 6: since it now writes ~65% more per review call, conciseness and delegation caps are where the savings live.</li>
+    </ul>
+  </aside>
+</section></div>
+
+<!-- ============================== 11 · DYNAMIC WORKFLOWS ============================== -->
+<div class="cell"><section class="slide">
+  <div class="rh"><span class="rh-sec">Dynamic Workflows</span><span>Research preview</span></div>
+  <div class="body">
+    <div class="eyebrow">Introduction to Dynamic Workflows</div>
+    <h2 style="margin-bottom:34px;">Delegation instincts, as infrastructure.</h2>
+    <div class="steps" style="margin-bottom:20px;">
+      <div class="st dim"><span class="sn">01 · you</span><p>Describe a complex task.</p></div>
+      <div class="ar">→</div>
+      <div class="st"><span class="sn">02 · claude</span><p>Writes a <b>JavaScript orchestration script</b>.</p></div>
+      <div class="ar">→</div>
+      <div class="st"><span class="sn">03 · runtime</span><p>Executes it in the background, fanning work out across subagents.</p></div>
+      <div class="ar">→</div>
+      <div class="st"><span class="sn">04 · back to you</span><p>Only the <b>coordinated result</b> returns.</p></div>
+    </div>
+    <div class="mono-note" style="margin-bottom:30px;">Intermediate results stay in script variables — the coordination leaves your conversation, so your context stays clean and the fan-out runs in parallel.</div>
+    <div class="cards c2" style="gap:24px; margin-bottom:26px;">
+      <div class="card" style="border-color:rgba(69,214,196,.32);">
+        <span class="tag" style="color:var(--teal)">For</span>
+        <p style="font-size:21.5px;">Wide, parallelizable work: codebase-wide bug hunts · migrations touching hundreds of files · security audits · performance profiling across services.</p>
+      </div>
+      <div class="card">
+        <span class="tag">Not for</span>
+        <p style="font-size:21.5px;">A faster way to write a single function. Interactive, ambiguous work stays in the normal conversation loop.</p>
+      </div>
+    </div>
+    <div class="strip">
+      <div class="kicker" style="font-size:29px;">A workflow that modifies code is only as safe as your <span class="ac">test gates</span> — it can run the tests as part of the process, but only if the tests exist.</div>
+      <div class="mono-note" style="margin-top:11px;">Best argument yet for writing tests first. · Research preview since May · CLI, Desktop, VS Code · Max / Team / Enterprise.</div>
+    </div>
+  </div>
+  <div class="counter"></div>
+  <aside>
+    <b>Speaker notes · what a workflow is</b>
+    <ul>
+      <li>The contrast that lands: normally Claude orchestrates turn by turn and every subagent result flows back into the conversation. With a workflow, the coordination moves out of the conversation and into a script.</li>
+      <li>Say the safety rule slowly — it is the one thing a room of engineers will hold you to. Workflows that modify code are exactly as safe as your test suite.</li>
+      <li>Access check: Max/Team/Enterprise, Enterprise is admin-controlled. If someone can't see it in <i>/config</i>, that's why.</li>
+    </ul>
+  </aside>
+</section></div>
+
+<!-- ============================== 12 · GUARDRAILS & WIRING ============================== -->
+<div class="cell"><section class="slide">
+  <div class="rh"><span class="rh-sec">Dynamic Workflows</span><span>Guardrails &amp; wiring</span></div>
+  <div class="body">
+    <div class="eyebrow">Guardrails &amp; wiring</div>
+    <h2 style="margin-bottom:40px;">Four knobs worth knowing.</h2>
+    <table>
+      <thead><tr>
+        <th style="width:190px;">Knob</th><th style="width:600px;">Setting</th><th>Why you care</th>
+      </tr></thead>
+      <tbody>
+        <tr>
+          <td class="mono">size</td>
+          <td><span class="nm">Default guideline: “medium” — aim for &lt; 15 agents</span><span class="code plain" style="margin-top:9px; display:inline-block;">/config → Dynamic workflow size</span></td>
+          <td>Wider isn't better. 15 is the line where coordination cost starts eating the win.</td>
+        </tr>
+        <tr>
+          <td class="mono">nesting</td>
+          <td><span class="nm">Subagents nest to depth 3 by default</span><span class="code plain" style="margin-top:9px; display:inline-block;">CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH=1</span></td>
+          <td>Set it to 1 to disable nesting entirely while you're learning the shape of a workflow.</td>
+        </tr>
+        <tr>
+          <td class="mono">routing</td>
+          <td><span class="nm">Bill the fan-out at mid-tier</span><span class="code" style="margin-top:9px; display:inline-block;">CLAUDE_CODE_SUBAGENT_MODEL=claude-sonnet-5</span></td>
+          <td>Opus 5 does the decomposition; every delegation bills Sonnet. One env var, permanent saving.</td>
+        </tr>
+        <tr>
+          <td class="mono">effort</td>
+          <td><span class="nm">Composes per node</span><span class="code plain" style="margin-top:9px; display:inline-block;">low → mechanical nodes &nbsp;·&nbsp; xhigh → judge / verify</span></td>
+          <td>The dial isn't one global setting — it's a property of each node in the graph.</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="strip" style="margin-top:34px;">
+      <div class="kicker">That last pair is <span class="ac">the map's two zones, wired together</span> — fan-out priced per attempt, judgment priced per mistake.</div>
+    </div>
+  </div>
+  <div class="counter"></div>
+  <aside>
+    <b>Speaker notes · wiring</b>
+    <ul>
+      <li>Show, don't dwell: this is the slide people photograph. Read out only the env var line.</li>
+      <li>Live tie-in: in Act 3 I open <i>/config</i> → "Dynamic workflow size" while the workflow spins up, and mention nesting depth 3 there.</li>
+      <li>If asked about cost blow-ups: multi-agent runs have been measured at roughly 15× the token cost of a single chat. The size guideline and the subagent-model env var are the two levers that keep that honest.</li>
+    </ul>
+  </aside>
+</section></div>
+
+<!-- ============================== 13 · TWO STORIES THAT SELL IT ============================== -->
+<div class="cell"><section class="slide">
+  <div class="rh"><span class="rh-sec">Dynamic Workflows</span><span>Two stories that sell it</span></div>
+  <div class="body">
+    <div class="eyebrow">Two stories that sell it</div>
+    <h2 style="margin-bottom:36px;">Nobody had to ask twice.</h2>
+    <div class="cards c2" style="align-items:stretch;">
+      <div class="card tint" style="padding:32px 34px;">
+        <span class="tag" style="color:var(--coral)">The Bun rewrite · verified</span>
+        <h3 style="font-size:32px; margin-bottom:18px;">Zig → Rust, in 11 days.</h3>
+        <table style="margin-bottom:16px;">
+          <tr><td class="mono">535,496</td><td>lines of Zig converted, across 1,448 files</td></tr>
+          <tr><td class="mono">May 3–14</td><td>2026 — 11 days, 6,502 commits</td></tr>
+          <tr><td class="mono">64</td><td>Claude instances in parallel, at peak</td></tr>
+        </table>
+        <p style="font-size:21px;">One prompt plus steering, with adversarial Claude review catching critical bugs pre-merge. The enabling mechanism: <span class="ac">massive test suites on both sides, acting as the verifier</span>.</p>
+        <p style="font-size:21px;">A task previously scoped in quarters.</p>
+      </div>
+      <div class="card" style="padding:32px 34px;">
+        <span class="tag" style="color:var(--coral)">Community demo · unprompted</span>
+        <h3 style="font-size:32px; margin-bottom:18px;">27 agents. One per part.</h3>
+        <p style="font-size:21px;">Someone sent Opus 5 to build an F1 showroom in Blender.</p>
+        <p style="font-size:21px;">It drafted the car — then fired off workflows with <span class="ac">27 agents, one per part</span>, each building a high-detail piece.</p>
+        <p style="font-size:21px;">Nobody asked it to. <span class="ac">The decomposition instinct is in the model</span> — Dynamic Workflows just gives it somewhere to put it.</p>
+      </div>
+    </div>
+    <div class="mono-note" style="margin-top:30px;">Bun figures fact-checked to the official Bun engineering blog · bun.com/blog/bun-in-rust</div>
+  </div>
+  <div class="counter"></div>
+  <aside>
+    <b>Speaker notes · corrected numbers + the pocket answer</b>
+    <ul>
+      <li><b>Fact-check correction (use the slide's numbers, not my draft's).</b> My outline said "~1M lines of Zig in 6 days." The verified public record is <b>535,496 lines of Zig across 1,448 files, May 3–14 2026 (11 days), 6,502 commits, up to 64 Claude instances in parallel</b> — corrected against the official Bun engineering blog, <i>bun.com/blog/bun-in-rust</i>. Do not say "a million lines in six days" on stage.</li>
+      <li><b>Balance, if someone pushes:</b> it was not one-shot — there was steering, the Bun team ran adversarial Claude review (3 critical bugs caught pre-merge), and Zig's creator publicly called the result "unreviewed slop." The enabling mechanism either way: massive test suites on both sides acting as the verifier.</li>
+      <li><b>Pocket answer — "isn't this just LangGraph?"</b> A loop is one node; a graph is several. Dynamic Workflows' twist is that <i>the model writes the graph per task</i> instead of a developer maintaining it. If pressed on multi-agent caution: ~15× token cost vs a single chat (Anthropic eng), 14 catalogued failure modes (UC Berkeley).</li>
+    </ul>
+  </aside>
+</section></div>
+
+<!-- ============================== 14 · DEMO HUB ============================== -->
+<div class="cell"><section class="slide">
+  <div class="rh"><span class="rh-sec">Live demo</span><span>One tool, three acts</span></div>
+  <div class="body">
+    <div class="eyebrow">Live demo · one tool, three acts</div>
+    <h2 style="margin-bottom:34px;">A redline round, end to end.</h2>
+    <div class="acts" style="margin-bottom:30px;">
+      <div class="act">
+        <span class="an">0</span>
+        <h3>The dial</h3>
+        <p>Terminal output of <b>effort_sweep</b>: the same prompt on Opus 5 at <b>low</b> vs <b>xhigh</b>, token counts side by side.</p>
+        <div class="meta">pre-run · 60 seconds</div>
+      </div>
+      <div class="act live">
+        <span class="an">1</span>
+        <h3>Judgment + collaboration</h3>
+        <p>A volunteer marks up a draft: tighten this, fact-check that, a question, an arrow. One round back — surgical edits, a <b>reply</b> to the question, a correction marked <i>proposed</i>.</p>
+        <div class="meta">opus 5 · xhigh</div>
+      </div>
+      <div class="act">
+        <span class="an">2</span>
+        <h3>Smart routing</h3>
+        <p>While Act 1 runs: the three routing layers, cheapest decision-maker first.</p>
+        <div class="meta">next slide</div>
+      </div>
+      <div class="act">
+        <span class="an">3</span>
+        <h3>The workflow</h3>
+        <p>Three staged packets: <b>one agent per packet</b>, then a judge that cross-checks every result for consistency. Open the generated script.</p>
+        <div class="meta">the payoff</div>
+      </div>
+    </div>
+    <div class="cards c2" style="gap:24px;">
+      <div class="strip">
+        <div class="kicker" style="font-size:29px;">It's a <span class="ac">collaborator, not a compiler</span> — the question got a reply, not an edit.</div>
+      </div>
+      <div class="strip teal">
+        <div class="kicker" style="font-size:29px;">Prime directive: <span style="color:var(--teal)">the author's words are sacred</span>. Unannotated paragraphs are untouched.</div>
+      </div>
+    </div>
+  </div>
+  <div class="counter"></div>
+  <aside>
+    <b>Speaker notes · demo hub (8 min) — this slide stays up</b>
+    <ul>
+      <li><b>Act 0 line:</b> "That's THE MAP as an API parameter. Everything else today is about deciding who gets which setting."</li>
+      <li><b>Act 1:</b> invite the volunteer early. Highlight + "tighten this" (instruct), highlight the dubious claim + fact-check, highlight a sentence + a <i>question</i>, one arrow moving a section up. Export → lands in ./inbox. Then: <i>"Process the newest round in ./inbox using the redline skill. Apply the annotations, reply to questions, verify at both widths, and give me the change summary."</i> Kick it off and talk over it (Act 2).</li>
+      <li><b>What to point at on return:</b> the question got a reply, not an edit · the fact-check correction is marked <i>proposed</i>, awaiting the author · unannotated paragraphs untouched · the two-width verification note. Then reopen result.html in redline: <i>"and now it's my turn again."</i> The loop is the product.</li>
+      <li><b>Act 3 deterministic guard, say it out loud:</b> a pixel diff can tell you the page changed; it can't read an arrow. If a tool could decide it, you'd use the tool.</li>
+      <li><b>Timer:</b> running long → Act 3's payoff (the generated script) is the keep; <b>Act 0 is the cut</b>. Screenshots of every stage are staged as wifi insurance.</li>
+      <li>Fallback: no Dynamic Workflows access → Act 3 becomes sequential skill runs with the Act 2 explorer fan-out shown instead.</li>
+    </ul>
+  </aside>
+</section></div>
+
+<!-- ============================== 15 · THREE ROUTING LAYERS ============================== -->
+<div class="cell"><section class="slide">
+  <div class="rh"><span class="rh-sec">Act 2 · smart routing</span><span>Three layers</span></div>
+  <div class="body">
+    <div class="eyebrow">Act 2 · the three routing layers</div>
+    <h2 style="margin-bottom:40px;">Cheapest decision-maker first.</h2>
+    <ol class="numlist" style="gap:28px;">
+      <li>
+        <span class="n">1</span>
+        <div>
+          <h3>Static routing <span style="color:var(--muted); font-weight:400; font-size:24px;">— config</span></h3>
+          <p style="margin-bottom:10px;"><span class="code">CLAUDE_CODE_SUBAGENT_MODEL=claude-sonnet-5</span></p>
+          <p>Every delegation bills mid-tier by default. One env var, permanent saving, zero decisions at runtime.</p>
+        </div>
+      </li>
+      <li>
+        <span class="n">2</span>
+        <div>
+          <h3>Policy routing <span style="color:var(--muted); font-weight:400; font-size:24px;">— agent definitions</span></h3>
+          <p style="margin-bottom:10px;"><span class="code plain">.claude/agents/explorer.md</span> → <span class="code plain">model: haiku</span>, tools Read/Grep/Glob only</p>
+          <p>“Return conclusions, not file dumps.” The policy is written once by a human or by Opus. Haiku just executes it.</p>
+        </div>
+      </li>
+      <li>
+        <span class="n">3</span>
+        <div>
+          <h3>Judgment routing <span style="color:var(--muted); font-weight:400; font-size:24px;">— the model itself</span></h3>
+          <p style="margin-bottom:10px;"><i>“Before changing anything, survey this page's styling system — layout, spacing scale, color tokens — conclusions only.”</i></p>
+          <p>Opus 5 fans the survey out to the explorer instead of reading everything itself. Your conversation stays clean.</p>
+        </div>
+      </li>
+    </ol>
+    <div class="strip" style="margin-top:36px;">
+      <div class="kicker">Routing gets smarter as you go down the list, and more expensive — so <span class="ac">push every decision as far up as it can live</span>.</div>
+    </div>
+  </div>
+  <div class="counter"></div>
+  <aside>
+    <b>Speaker notes · “why would Haiku pick the model? Isn't that brains work?” (near-certain Q&amp;A)</b>
+    <ul>
+      <li><b>Routing ≠ orchestrating.</b> Routing is triage into buckets — cheap pattern-matching, Haiku's lane. Orchestration (decomposing, sequencing, judging results) stays with Opus.</li>
+      <li><b>The judgment lives in the policy</b> — the LANES table or the agent frontmatter — written by you or by Opus at design time. Haiku applies it; it doesn't set strategy.</li>
+      <li><b>Economics:</b> a router runs on every request, so it must cost less than the cheapest lane it routes to — otherwise you're paying Opus tokens just to learn that a task was cheap.</li>
+      <li><b>Safety:</b> bias to escalate on uncertainty. Misrouting up costs cents; misrouting down costs quality.</li>
+      <li>In Claude Code, Opus <i>does</i> pick models and effort per subagent — it's already in the loop, so routing comes free. The standalone Haiku router is <b>the front door, not the brain</b>.</li>
+      <li>The API version of layers 1–2 is the LANES table in <i>effort_router_demo.py</i> — mention it, don't run it.</li>
+    </ul>
+  </aside>
+</section></div>
+
+<!-- ============================== 16 · QUICK HITS ============================== -->
+<div class="cell"><section class="slide">
+  <div class="rh"><span class="rh-sec">Quick hits</span><span>Platform engineers &amp; designers</span></div>
+  <div class="body">
+    <div class="eyebrow">Quick hits</div>
+    <h2 style="margin-bottom:40px;">Two rooms, two lists.</h2>
+    <div class="cards c2" style="align-items:stretch; gap:32px;">
+      <div class="card" style="padding:34px 36px;">
+        <span class="tag" style="color:var(--teal)">For platform engineers</span>
+        <table>
+          <tr><td><span class="nm">Mid-conversation tool changes</span>No cache invalidation. <span style="color:var(--dim)">(beta)</span></td></tr>
+          <tr><td><span class="nm">Automatic fallbacks</span>Safety-flagged requests route instead of block. <span style="color:var(--dim)">(beta)</span></td></tr>
+          <tr><td><span class="nm">Org-wide default models</span>Team and Enterprise.</td></tr>
+          <tr><td><span class="nm">No data-retention requirement</span>For general access.</td></tr>
+        </table>
+      </div>
+      <div class="card" style="padding:34px 36px;">
+        <span class="tag" style="color:var(--purple)">For designers</span>
+        <table>
+          <tr><td><span class="nm">Much stronger visual output</span>Animations, 3D, interactive artifacts.</td></tr>
+          <tr><td><span class="nm">Frontend self-checking</span>It opened its pages at desktop <i>and</i> phone widths, caught a product below the mobile fold, and fixed it before handing back.</td></tr>
+          <tr><td><span class="nm">Vision, with tools</span>Works best when it can crop and verify iteratively — give it the scissors.</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="counter"></div>
+  <aside>
+    <b>Speaker notes · quick hits (2 min, brisk)</b>
+    <ul>
+      <li>Two minutes total. Read the bold lines only; the detail is for the photograph.</li>
+      <li>The designer item that always gets a reaction: it checked its own work at two widths and caught a product below the mobile fold <i>before</i> handing back. Callback to Act 1's two-width verification note.</li>
+      <li>Platform framing: the two betas are about keeping long-lived agents alive — tool changes without cache invalidation, and fallbacks instead of hard blocks.</li>
+    </ul>
+  </aside>
+</section></div>
+
+<!-- ============================== 17 · CLOSE ============================== -->
+<div class="cell"><section class="slide glow">
+  <div class="rh"><span class="rh-sec">Close</span><span>Three takeaways</span></div>
+  <div class="body">
+    <div class="eyebrow">Take three things</div>
+    <ol class="take">
+      <li><span class="n">01</span><span class="t">Make Opus 5 the daily driver.<span class="s">Tune cost with <b style="color:var(--coral); font-weight:600;">effort</b>, not by downgrading models.</span></span></li>
+      <li><span class="n">02</span><span class="t">Update your prompts by <i>removing</i> things.<span class="s">Verification scaffolding now costs money and adds nothing.</span></span></li>
+      <li><span class="n">03</span><span class="t">Route deliberately.<span class="s">Opus for judgment, Sonnet for implementation, Haiku for fan-out — and reach for a Dynamic Workflow when the work is wide, parallel, and test-gated.</span></span></li>
+    </ol>
+  </div>
+  <div class="counter"></div>
+  <aside>
+    <b>Speaker notes · close</b>
+    <ul>
+      <li>Say all three, then stop talking. No new facts after this slide.</li>
+      <li>If the demo ran long, this is the slide to land on directly from slide 14 — skip 15 and 16.</li>
+      <li>Q&amp;A pockets I'm holding: the zone shading (slide 8 notes), "why would Haiku pick the model" (slide 15 notes), "isn't this just LangGraph?" (slide 13 notes).</li>
+    </ul>
+  </aside>
+</section></div>
+
+<!-- ============================== 18 · LINKS ============================== -->
+<div class="cell"><section class="slide">
+  <div class="rh"><span class="rh-sec">Links</span><span>Making the Most of Claude Opus 5 · Dustin</span></div>
+  <div class="body">
+    <div class="eyebrow">Where to read the rest</div>
+    <h2 style="margin-bottom:30px;">Links.</h2>
+    <div class="links">
+      <div class="lk"><span class="n">Opus 5 announcement</span><span class="u">anthropic.com/news → “Introducing Claude Opus 5”</span></div>
+      <div class="lk"><span class="n">Sonnet 5 announcement</span><span class="u">anthropic.com/news → “Introducing Claude Sonnet 5”</span></div>
+      <div class="lk"><span class="n">Opus 5 prompting guide</span><span class="u">docs.claude.com → “Claude Opus 5 prompting best practices”</span></div>
+      <div class="lk"><span class="n">Effort docs</span><span class="u">docs.claude.com → “Effort control · output_config.effort”</span></div>
+      <div class="lk"><span class="n">Dynamic Workflows</span><span class="u">docs.claude.com → “Claude Code: Dynamic Workflows (research preview)”</span></div>
+      <div class="lk"><span class="n">Intelligence vs Cost chart</span><span class="u">artificialanalysis.ai → “Intelligence Index vs Cost per Task”</span></div>
+      <div class="lk"><span class="n">The Bun rewrite receipt</span><span class="u">bun.com/blog/bun-in-rust</span></div>
+      <div class="lk"><span class="n">This deck &amp; the map</span><span class="u">talk/slides.html · talk/opus-5-cost-capability-map.html</span></div>
+    </div>
+    <div class="mono-note" style="margin-top:34px;">Thank you. Questions — I have about fifteen minutes.</div>
+  </div>
+  <div class="counter"></div>
+  <aside>
+    <b>Speaker notes · links</b>
+    <ul>
+      <li>Leave this up for the whole Q&amp;A. Say "photograph this now" once, then take the first question.</li>
+      <li>The map is a standalone file — offer to share it; it's the thing people ask for afterwards.</li>
+    </ul>
+  </aside>
+</section></div>
+
+</div><!-- /#deck -->
+
+<div id="ovhint">click a slide &nbsp;·&nbsp; esc / o to close</div>
+
+<script>
+/* ============================================================
+   THE MAP — ported from opus-5-cost-capability-map.html
+   Namespaced in an IIFE; ids prefixed "map-"; colors inlined so
+   no CSS-var-in-SVG-attribute dependency. Original file untouched.
+   ============================================================ */
+(function(){
+  const svg=document.getElementById("map-chart");
+  const wrap=document.getElementById("map-plot");
+  const tooltip=document.getElementById("map-tooltip");
+  const scope=document.getElementById("map-wrap");
+  if(!svg) return;
+
+  const K={grid:"#222A34", muted:"#8A94A0", bg:"#0E1116"};
+  const C={haiku:"#45D6C4",sonnet:"#F2B84B",opus48:"#7A8CA6",opus5:"#FF6A55",fable:"#A78BFA",
+           gpt:"#5B9BD5",gemini:"#7BC47F",grok:"#C9B458",deepseek:"#B87FD9"};
+
+  /* Fit the drawing box to the space the slide actually gives us,
+     so the SVG fills its panel instead of letterboxing. */
+  const pw=wrap.clientWidth||1560, ph=wrap.clientHeight||760;
+  const W=1120, H=Math.max(420, Math.min(760, Math.round(W*ph/pw)));
+  svg.setAttribute("viewBox","0 0 "+W+" "+H);
+
+  const M={l:78,r:196,t:34,b:62};
+  const iw=W-M.l-M.r, ih=H-M.t-M.b;
+  const xmin=0.6,xmax=36, ymin=48,ymax=96;
+  const X=c=>M.l+iw*(Math.log(c/xmin)/Math.log(xmax/xmin));
+  const Y=v=>M.t+ih*(1-(v-ymin)/(ymax-ymin));
+
+  const series=[
+   {name:"Haiku 4.5",color:C.haiku,pts:[
+     {e:"—",c:1,v:56,note:"<b>Haiku 4.5</b>Anthropic's efficiency tier: built for parallelized execution, subagents, and latency-sensitive paths. The fan-out workhorse."}]},
+   {name:"Sonnet 5",color:C.sonnet,pts:[
+     {e:"low",c:2.2,v:66,note:"<b>Sonnet 5 · low</b>High-volume, well-scoped tasks where cost matters."},
+     {e:"med",c:3.2,v:72,note:"<b>Sonnet 5 · medium</b>Everyday agentic work at mid-tier pricing ($2/$10 intro to Aug 31)."},
+     {e:"high",c:4.8,v:77,note:"<b>Sonnet 5 · high</b>Performs close to Opus 4.8 — beat it on Terminal-Bench 2.1 (80.4 vs 74.6), the first Sonnet to pass its Opus sibling on a major coding benchmark."},
+     {e:"xhigh",c:7.5,v:80,note:"<b>Sonnet 5 · xhigh</b>⚠ Cost approaches Opus-4.8-class here while trailing on several benchmarks — the curves cross: jump tiers instead."}]},
+   {name:"Opus 4.8",color:C.opus48,ref:true,pts:[
+     {e:"high",c:9,v:77,note:"<b>Opus 4.8 · high (reference)</b>The previous workhorse. Same $5/$25 price as Opus 5 — which more than doubles its Frontier-Bench score at lower cost per task."}]},
+   {name:"Opus 5",color:C.opus5,star:true,pts:[
+     {e:"low",c:5.5,v:76,note:"<b>Opus 5 · low</b>Low & medium are meaningfully stronger than on any prior Opus — strong quality at a fraction of the tokens and latency. Use liberally where evals hold."},
+     {e:"med",c:7,v:81,note:"<b>Opus 5 · medium</b>Work you'd never have trusted to medium on 4.8 may run fine here, at a real saving."},
+     {e:"high",c:10,v:85,note:"<b>Opus 5 · high</b>The API default. Same price as Opus 4.8, new state of the art on Frontier-Bench and GDPval-AA."},
+     {e:"xhigh",c:15,v:90,note:"<b>Opus 5 · xhigh</b>Recommended for demanding coding & agentic work. CursorBench 3.2: 70.1 vs Fable's 70.4 — near-parity at half the cost. Frontier-Bench peaks here (43.3 vs Fable's 33.7)."},
+     {e:"max",c:19,v:90.5,note:"<b>Opus 5 · max</b>Benchmark-dependent peak: tops the Artificial Analysis Intelligence Index at 61 — highest of 170 tracked models, one point above Fable 5 — and leads GDPval-AA v2 by >100 Elo. Yet Frontier-Bench peaks at xhigh. At the very top, 'better' depends on the meter."}]},
+   {name:"Fable 5",color:C.fable,pts:[
+     {e:"high",c:20,v:89.5,note:"<b>Fable 5 · high</b>Mythos-class at $10/$50. Retains real edges: SWE-bench Pro (+0.8), factual knowledge (AA-Omniscience), legal & health margins, and creative/visual polish in hands-on tests."},
+     {e:"xhigh",c:30,v:91,note:"<b>Fable 5 · xhigh</b>AA Index 60 vs Opus 5's 61; Opus leads Frontier-Bench by 9.6 pts and the AA agentic suites by wide Elo margins — at half the price. The top of the market is an overlap, not a hierarchy."}]}
+  ];
+
+  const ghosts=[
+   {name:"GPT-5.6 Luna",color:C.gpt,pts:[
+     {e:"low",c:2,v:70,note:"<b>GPT-5.6 Luna · low</b>OpenAI's cost-efficiency star. Artificial Analysis: for any Terra effort level, a Luna or Sol level is more intelligent at no extra cost — Terra is dominated (which is why it's not on this map)."},
+     {e:"high",c:4,v:79,note:"<b>GPT-5.6 Luna · high</b>Per AA's effort-curve charts, Luna pushes past GPT-5.5 on the Pareto frontier across reasoning efforts."}]},
+   {name:"GPT-5.6 Sol",color:C.gpt,dash:"7 4",pts:[
+     {e:"med",c:9,v:85,note:"<b>GPT-5.6 Sol · medium</b>OpenAI's flagship curve. Also added a max reasoning setting plus an 'ultra' mode that farms work to parallel subagents — same convergence on the dial."},
+     {e:"high",c:15,v:89,note:"<b>GPT-5.6 Sol · high</b>The two flagship curves track closely through this region — the cross-lab race is now curve-vs-curve, not point-vs-point."},
+     {e:"max",c:26,v:92,note:"<b>GPT-5.6 Sol · max</b>OpenAI's claim: within one point of Fable 5 on the AA Intelligence Index in 61% less time. Vendor-reported — but the shape of the claim matches Anthropic's Opus-vs-Fable pitch."}]},
+   {name:"Gemini 3 Pro",color:C.gemini,pts:[
+     {e:"think",c:8,v:82,note:"<b>Gemini 3 Pro · thinking</b>Google's dial: thinking levels rather than effort names — same mechanism, different label. Cross-lab comparisons normalize by token spend."},
+     {e:"deep",c:16,v:87,note:"<b>Gemini 3 Pro · Deep Think</b>The top of Google's dial. Every major lab now ships one: the 2026 question is 'which model, at what effort?'"}]},
+   {name:"Grok 4.5",color:C.grok,pts:[
+     {e:"high",c:3.5,v:80,note:"<b>Grok 4.5 · high</b>AA Index 54 vs Fable's 60 — at ~9x lower cost per Index task ($0.31 vs $2.75). Sits on the cross-lab Pareto frontier: cheap models aren't off the map, they're a different point on it."}]},
+   {name:"DeepSeek v4",color:C.deepseek,pts:[
+     {e:"flash",c:0.9,v:66,note:"<b>DeepSeek v4 Flash</b>AA Index 44 at ~69x cheaper than Fable per task. Broader context: 9 of the 13 models on AA's intelligence-price frontier are open-weights — the fan-out zone is contested territory."}]}
+  ];
+
+  const NS="http://www.w3.org/2000/svg";
+  function el(t,a,parent){const n=document.createElementNS(NS,t);for(const k in a)n.setAttribute(k,a[k]);(parent||svg).appendChild(n);return n;}
+
+  // zones
+  el("rect",{x:M.l,y:M.t,width:X(3)-M.l,height:ih,fill:C.haiku,opacity:.05});
+  el("rect",{x:X(12),y:M.t,width:M.l+iw-X(12),height:ih,fill:C.opus5,opacity:.045});
+  el("text",{x:M.l+12,y:M.t+20,class:"zone-label",fill:C.haiku}).textContent="FAN-OUT ZONE";
+  el("text",{x:X(12)+12,y:M.t+20,class:"zone-label",fill:C.opus5}).textContent="JUDGMENT ZONE";
+
+  // grid + ticks
+  [1,2,4,8,16,32].forEach(c=>{
+    el("line",{x1:X(c),y1:M.t,x2:X(c),y2:M.t+ih,stroke:K.grid,"stroke-width":1});
+    el("text",{x:X(c),y:M.t+ih+20,class:"tick","text-anchor":"middle"}).textContent=c+"×";
+  });
+  [50,60,70,80,90].forEach(v=>{
+    el("line",{x1:M.l,y1:Y(v),x2:M.l+iw,y2:Y(v),stroke:K.grid,"stroke-width":1});
+    el("text",{x:M.l-12,y:Y(v)+4,class:"tick","text-anchor":"end"}).textContent=v;
+  });
+  el("text",{x:M.l+iw/2,y:H-10,class:"axis-label","text-anchor":"middle"}).textContent="relative cost per task (log) →";
+  el("text",{x:20,y:M.t+ih/2,class:"axis-label",transform:`rotate(-90 20 ${M.t+ih/2})`,"text-anchor":"middle"}).textContent="capability index (illustrative) →";
+
+  const ghostGroup=el("g",{id:"map-ghosts"});
+
+  function draw(s,parent){
+    if(s.pts.length>1){
+      const d=s.pts.map((p,i)=>(i?"L":"M")+X(p.c)+" "+Y(p.v)).join(" ");
+      el("path",{d,class:"curve",stroke:s.color,"stroke-dasharray":s.ref?"5 5":(s.ghost?(s.dash||"3 4"):"none")},parent);
+    }
+    s.pts.forEach((p,i)=>{
+      const r=s.star?7.5:(s.ghost?5:6);
+      if(s.ref) el("circle",{cx:X(p.c),cy:Y(p.v),r:r+4,fill:"none",stroke:s.color,"stroke-dasharray":"3 3"},parent);
+      const dot=el("circle",{cx:X(p.c),cy:Y(p.v),r,fill:s.ghost?K.bg:s.color,stroke:s.ghost?s.color:"#0E1116","stroke-width":s.ghost?1.8:1.5,class:"pt"},parent);
+      if(p.e!=="—"&&!s.ghost) el("text",{x:X(p.c),y:Y(p.v)-13,class:"plabel","text-anchor":"middle"},parent).textContent=p.e;
+      if(i===s.pts.length-1) el("text",{x:X(p.c)+14,y:Y(p.v)+5,class:"mlabel",fill:s.color},parent).textContent=s.name;
+
+      function show(ev){
+        tooltip.innerHTML=p.note;
+        tooltip.style.opacity=1;
+        const b=wrap.getBoundingClientRect();
+        const sc=(b.width/wrap.clientWidth)||1;              // undo the deck's scale transform
+        let tx=(ev.clientX-b.left)/sc+18, ty=(ev.clientY-b.top)/sc-14;
+        const tw=tooltip.offsetWidth||360, th=tooltip.offsetHeight||120;
+        if(tx+tw>wrap.clientWidth) tx-=(tw+36);
+        if(ty+th>wrap.clientHeight) ty=wrap.clientHeight-th;
+        if(ty<0) ty=0;
+        tooltip.style.left=tx+"px"; tooltip.style.top=ty+"px";
+        dot.setAttribute("r",r+2.5);
+      }
+      dot.addEventListener("mousemove",show);
+      dot.addEventListener("mouseenter",show);
+      dot.addEventListener("mouseleave",()=>{tooltip.style.opacity=0;dot.setAttribute("r",r);});
+    });
+  }
+
+  ghosts.forEach(s=>{s.ghost=true;draw(s,ghostGroup);});
+  series.forEach(s=>draw(s,svg));
+
+  // callout: curves crossing (Sonnet xhigh vs Opus 5 low/med)
+  const cx1=X(6.4), cy1=Y(78.5);
+  el("line",{x1:cx1,y1:cy1-40,x2:cx1,y2:cy1+8,stroke:K.muted,"stroke-width":1,"stroke-dasharray":"2 3"});
+  el("text",{x:cx1,y:cy1-49,class:"callout","text-anchor":"middle"}).textContent="curves cross → jump tiers";
+
+  // callout: top-of-market overlap (Opus 5 max vs Fable)
+  const cx2=X(24), cy2=Y(90.3);
+  el("line",{x1:cx2,y1:cy2+28,x2:cx2,y2:cy2-2,stroke:K.muted,"stroke-width":1,"stroke-dasharray":"2 3"});
+  el("text",{x:cx2,y:cy2+44,class:"callout","text-anchor":"middle"}).textContent="overlap, not hierarchy";
+
+  // toggle — scoped to the map container, not <body>
+  const btn=document.getElementById("map-toggle");
+  btn.addEventListener("click",e=>{
+    e.stopPropagation();
+    const on=scope.classList.toggle("show-ghosts");
+    btn.textContent=on?"hide other labs":"show other labs";
+    btn.setAttribute("aria-pressed",String(on));
+  });
+})();
+
+/* ============================================================
+   DECK CONTROLLER
+   ============================================================ */
+(function(){
+  const deck=document.getElementById("deck");
+  const slides=[].slice.call(document.querySelectorAll(".slide"));
+  const cells=[].slice.call(document.querySelectorAll(".cell"));
+  const N=slides.length;
+  let i=0, ov=false, buf="", bufT=null;
+
+  // slide counters
+  slides.forEach((s,k)=>{
+    const c=s.querySelector(".counter");
+    if(c) c.textContent=String(k+1).padStart(2,"0")+" / "+N;
+  });
+
+  function fit(){
+    if(ov) return;
+    const s=Math.min(window.innerWidth/1920, window.innerHeight/1080);
+    deck.style.transform="translate(-50%,-50%) scale("+s+")";
+  }
+  function ovFit(){
+    const pad=56, gap=16, cols=5;
+    const w=Math.max(190, Math.min(384, Math.floor((window.innerWidth-pad-gap*(cols-1))/cols)));
+    document.body.style.setProperty("--ovw", w+"px");
+    document.body.style.setProperty("--ovs", (w/1920).toFixed(5));
+  }
+  function show(n,push){
+    i=Math.max(0, Math.min(N-1, n));
+    slides.forEach((s,k)=>s.classList.toggle("current", k===i));
+    cells.forEach((c,k)=>c.classList.toggle("here", k===i));
+    const h="#"+(i+1);
+    if(location.hash!==h) history.replaceState(null,"",h);
+  }
+  function setOv(on){
+    ov=on;
+    document.body.classList.toggle("ov",on);
+    if(on){ ovFit(); deck.style.transform="none";
+      const c=cells[i]; if(c) c.scrollIntoView({block:"nearest"});
+    } else { fit(); window.scrollTo(0,0); }
+  }
+  function fromHash(){
+    const n=parseInt((location.hash||"").replace("#",""),10);
+    show(isFinite(n)&&n>=1 ? n-1 : 0);
+  }
+
+  window.addEventListener("resize",()=>{ ov?ovFit():fit(); });
+  window.addEventListener("hashchange",fromHash);
+
+  document.addEventListener("keydown",e=>{
+    const k=e.key;
+    if(k==="Escape"){ if(ov) setOv(false); else setOv(true); e.preventDefault(); return; }
+    if(k==="o"||k==="O"){ setOv(!ov); e.preventDefault(); return; }
+    if(k==="n"||k==="N"){ document.body.classList.toggle("notes"); e.preventDefault(); return; }
+    if(k==="f"||k==="F"){
+      if(document.fullscreenElement) document.exitFullscreen();
+      else if(document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
+      e.preventDefault(); return;
+    }
+    if(k==="ArrowRight"||k==="ArrowDown"||k===" "||k==="PageDown"||k==="Enter"){
+      if(ov) setOv(false); else show(i+1); e.preventDefault(); return;
+    }
+    if(k==="ArrowLeft"||k==="ArrowUp"||k==="PageUp"||k==="Backspace"){
+      if(ov) setOv(false); else show(i-1); e.preventDefault(); return;
+    }
+    if(k==="Home"){ show(0); e.preventDefault(); return; }
+    if(k==="End"){ show(N-1); e.preventDefault(); return; }
+    if(/^[0-9]$/.test(k)){                       // type a number, jump to that slide
+      buf+=k; clearTimeout(bufT);
+      bufT=setTimeout(()=>{ const n=parseInt(buf,10); buf=""; if(n>=1&&n<=N){ show(n-1); if(ov) setOv(false);} },550);
+      e.preventDefault(); return;
+    }
+  });
+
+  document.addEventListener("click",e=>{
+    if(ov){
+      const cell=e.target.closest(".cell");
+      if(cell){ show(cells.indexOf(cell)); setOv(false); }
+      return;
+    }
+    if(e.target.closest("button, a, #map-wrap, aside")) return;   // keep the map interactive
+    show(i+1);
+  });
+
+  fit();
+  fromHash();
+})();
+</script>
+</body>
+</html>
