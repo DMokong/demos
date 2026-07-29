@@ -1,0 +1,7 @@
+# python bytecode from talk/effort_router_demo.py
+__pycache__/
+*.pyc
+
+# scratch
+.DS_Store
+*.log
