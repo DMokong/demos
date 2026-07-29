@@ -94,22 +94,42 @@ Put them in a folder you can open in one keystroke. If wifi dies, you narrate
 over screenshots and the story still lands — **redline itself needs no network**
 except for `annotated.png` (see §3.2).
 
-### 1.6 Second terminal with `effort_sweep` output ready for Act 0 — **TONIGHT (3 min, needs ANTHROPIC_API_KEY)**
+### 1.6 Second terminal with `effort_sweep` output ready for Act 0 — **TONIGHT (3 min, needs an API key OR AWS Bedrock)**
 
 `talk/effort_router_demo.py` is verified working: `python3 -m py_compile` passes,
 `--help` and both subcommand helps render, and the `route` subcommand prints the
-LANES table with no API call and no key. The **missing-key path is correct**: it
-prints a clear message pointing at `console.anthropic.com/settings/keys` and
-exits **1**. `anthropic` 0.120.2 is importable here.
+LANES table with no API call and no credentials. The script now supports
+`--backend {auto,api,bedrock}` (default `auto`): direct API if
+`ANTHROPIC_API_KEY` is set, else Amazon Bedrock if AWS credentials are
+discoverable, else it prints setup instructions for **both** options and exits
+nonzero — never fabricated numbers. `anthropic` 0.120.2 + `boto3` are importable
+here (`boto3` is a presenter-machine prerequisite for the Bedrock path only —
+`pip install boto3` if it's missing).
 
-What has **never run**: a live sweep. There is no API key in this environment, so
-no real token counts or timings exist yet. Nothing in the script fabricates them.
+What has **never run**: a live sweep. This sandbox has no API key and no working
+Bedrock credentials (the ambient `AWS_ACCESS_KEY_ID` here is a sandbox
+placeholder — a real Bedrock call against it 403s with "security token
+included in the request is invalid"), so no real token counts or timings exist
+yet. **You have Bedrock, not an Anthropic API key — use the Bedrock path
+tonight.**
 
-> **TONIGHT:**
+> **TONIGHT (Bedrock — this is your path, no ANTHROPIC_API_KEY needed):**
+> ```bash
+> cd /home/user/demos/talk
+> AWS_REGION=us-east-1 python3 effort_router_demo.py effort_sweep --backend bedrock
+> ```
+> (Swap `us-east-1` for whichever region has your Opus 5 / Haiku 4.5 Bedrock
+> access enabled; AWS credentials resolve the normal way — env vars, an
+> `AWS_PROFILE`, or an instance role.) The banner line printed before the
+> table confirms `backend: bedrock` and the resolved `anthropic.claude-*`
+> model ID — that's your check that it's really hitting Bedrock, not silently
+> no-op'ing.
+>
+> **If you get an Anthropic API key instead:**
 > ```bash
 > export ANTHROPIC_API_KEY=sk-ant-...
 > cd /home/user/demos/talk
-> python3 effort_router_demo.py effort_sweep          # opus-5 at low vs xhigh
+> python3 effort_router_demo.py effort_sweep          # opus-5 at low vs xhigh, --backend auto picks the API key
 > ```
 > Leave that terminal on screen 2, scrolled to the table. Sanity-check that the
 > output-token ratio is big enough to be the punchline; if `low` and `xhigh` land
