@@ -1,0 +1,65 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>redline core tests</title>
+<script src="./redline-core.js"></script>
+<pre id="out"></pre>
+<script>
+let pass = 0, fail = 0;
+function eq(actual, expected, name){
+  const a = JSON.stringify(actual), e = JSON.stringify(expected);
+  if (a === e){ pass++; log("PASS  " + name); }
+  else { fail++; log("FAIL  " + name + "\n        expected " + e + "\n        actual   " + a); }
+}
+function log(s){ document.getElementById("out").textContent += s + "\n"; }
+function docFrom(html){
+  return new DOMParser().parseFromString(html, "text/html");
+}
+
+const ARTICLE = `<article id="post">
+  <p id="lede">Alpha beta gamma.</p>
+  <p>Delta epsilon zeta.</p>
+</article>`;
+
+// Rung 1: selector + offsets match exactly
+(function(){
+  const d = docFrom(ARTICLE);
+  const idx = RedlineCore.buildTextIndex(d);
+  const r = RedlineCore.resolveAnchor(d, idx, {
+    selector: "#post > p:nth-of-type(2)",
+    start_offset: 0, end_offset: 19,
+    quoted_text: "Delta epsilon zeta.",
+    prefix: "", suffix: "", document_start_offset: 0
+  });
+  eq(r && r.toString(), "Delta epsilon zeta.", "rung 1: selector+offsets");
+})();
+
+// Rung 2: selector is wrong, prefix+quote+suffix rescues it
+(function(){
+  const d = docFrom(ARTICLE);
+  const idx = RedlineCore.buildTextIndex(d);
+  const r = RedlineCore.resolveAnchor(d, idx, {
+    selector: "#nonexistent",
+    start_offset: 0, end_offset: 19,
+    quoted_text: "Delta epsilon zeta.",
+    prefix: "", suffix: "", document_start_offset: 0
+  });
+  eq(r && r.toString(), "Delta epsilon zeta.", "rung 2/3: falls through to text search");
+})();
+
+// Missing text resolves to null
+(function(){
+  const d = docFrom(ARTICLE);
+  const idx = RedlineCore.buildTextIndex(d);
+  const r = RedlineCore.resolveAnchor(d, idx, {
+    selector: "#nope", start_offset: 0, end_offset: 5,
+    quoted_text: "absent words", prefix: "", suffix: "", document_start_offset: 0
+  });
+  eq(r, null, "missing quote resolves to null");
+})();
+
+// nearestIndexOf picks the occurrence closest to the hint
+eq(RedlineCore.nearestIndexOf("xx ab yy ab zz", "ab", 12), 9, "nearestIndexOf picks nearest");
+
+log("\n" + pass + " passed, " + fail + " failed");
+document.title = fail ? "FAIL" : "PASS";
+</script>

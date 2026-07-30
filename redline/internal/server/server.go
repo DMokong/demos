@@ -73,6 +73,7 @@ func New(store packet.Store, assets fs.FS, sample []byte, opts snapshot.Options)
 //
 //	GET  /                 the app
 //	GET  /view/{id}        the app, focused on a snapshot
+//	GET  /js/{name}        a frontend script from web/
 //	POST /snapshot         {url|path|sample} -> snapshot id + session/round
 //	GET  /snapshot/{id}    the frozen HTML + metadata (for iframe srcdoc)
 //	GET  /inbox            sessions/rounds listing
@@ -81,6 +82,7 @@ func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /{$}", s.handleApp)
 	mux.HandleFunc("GET /view/{id}", s.handleApp)
+	mux.HandleFunc("GET /js/{name}", s.handleAsset)
 	mux.HandleFunc("POST /snapshot", s.handleCreateSnapshot)
 	mux.HandleFunc("GET /snapshot/{id}", s.handleGetSnapshot)
 	mux.HandleFunc("GET /inbox", s.handleInbox)
@@ -110,6 +112,24 @@ func (s *Server) handleApp(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-store")
 	_, _ = w.Write(b)
+}
+
+// handleAsset serves a static frontend file from the asset FS. Only files
+// directly under web/ are reachable, and the name is a single path segment,
+// so it cannot traverse.
+func (s *Server) handleAsset(w http.ResponseWriter, r *http.Request) {
+	name := r.PathValue("name")
+	if name == "" || strings.ContainsAny(name, `/\.`) != strings.HasSuffix(name, ".js") {
+		http.NotFound(w, r)
+		return
+	}
+	b, err := fs.ReadFile(s.assets, "web/"+name)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+	w.Header().Set("Content-Type", "application/javascript; charset=utf-8")
+	w.Write(b)
 }
 
 type snapshotRequest struct {

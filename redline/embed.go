@@ -7,8 +7,8 @@ package redline
 
 import "embed"
 
-// Assets holds web/app.html (the entire frontend) and sample/article.html
-// (the bundled demo draft).
+// Assets holds the frontend (web/app.html plus its scripts) and
+// sample/article.html (the bundled demo draft).
 //
-//go:embed web/app.html sample/article.html
+//go:embed web/app.html web/redline-core.js sample/article.html
 var Assets embed.FS

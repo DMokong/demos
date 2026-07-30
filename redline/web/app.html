@@ -310,6 +310,7 @@
 <div id="noteBox"><input type="text" id="noteInput" placeholder="note…" spellcheck="false"><div class="nb-hint">Enter to attach · Esc to cancel</div></div>
 <div id="toast"></div>
 
+<script src="/js/redline-core.js"></script>
 <script>
 "use strict";
 /* =========================================================================
@@ -453,6 +454,7 @@ async function afterMount(){
   const f = $("#page");
   const d = f.contentDocument;
   S.doc = d;
+  S.textIndex = null;   // the index is memoized now, so a new document voids it
   // The snapshot is frozen furniture: block navigation, allow selection.
   d.addEventListener("click", e => {
     const a = e.target && e.target.closest ? e.target.closest("a") : null;
@@ -502,18 +504,7 @@ async function measureDoc(){
    Offsets are into textContent, so the agent can reproduce them with
    nothing but a DOM parser: el.textContent.slice(start, end) === quoted_text.
    ========================================================================= */
-function buildTextIndex(){
-  const d = S.doc;
-  if (!d || !d.body) { S.textIndex = null; return; }
-  const walker = d.createTreeWalker(d.body, NodeFilter.SHOW_TEXT, null);
-  const nodes = [];
-  let text = "", n;
-  while ((n = walker.nextNode())){
-    nodes.push({node:n, start:text.length, end:text.length + n.data.length});
-    text += n.data;
-  }
-  S.textIndex = {text, nodes};
-}
+function buildTextIndex(){ if (!S.textIndex && S.doc) S.textIndex = RedlineCore.buildTextIndex(S.doc); }
 
 function globalPos(container, offset){
   const idx = S.textIndex;
@@ -603,66 +594,11 @@ function makeAnchor(range){
   };
 }
 
-function rangeInElement(el, start, end){
-  const d = S.doc;
-  const walker = d.createTreeWalker(el, NodeFilter.SHOW_TEXT, null);
-  const r = d.createRange();
-  let pos = 0, started = false, n, last = null;
-  while ((n = walker.nextNode())){
-    const len = n.data.length;
-    last = {node:n, len};
-    if (!started && start < pos + len){ r.setStart(n, start - pos); started = true; }
-    if (started && end <= pos + len){ r.setEnd(n, end - pos); return r; }
-    pos += len;
-  }
-  if (!last) return null;
-  if (!started) r.setStart(last.node, last.len);
-  r.setEnd(last.node, last.len);
-  return r;
-}
-
-function rangeFromGlobal(gs, ge){
-  const idx = S.textIndex;
-  if (!idx) return null;
-  const r = S.doc.createRange();
-  let s = null, e = null;
-  for (const x of idx.nodes){
-    if (s === null && gs < x.end){ r.setStart(x.node, Math.max(0, gs - x.start)); s = true; }
-    if (s !== null && ge <= x.end){ r.setEnd(x.node, Math.max(0, ge - x.start)); e = true; break; }
-  }
-  return (s && e) ? r : null;
-}
-
-function nearestIndexOf(hay, needle, near){
-  let best = -1, bestD = Infinity, i = hay.indexOf(needle);
-  while (i >= 0){
-    const d = Math.abs(i - near);
-    if (d < bestD){ bestD = d; best = i; }
-    i = hay.indexOf(needle, i + 1);
-  }
-  return best;
-}
-
-/* Resolution order mirrors SKILL.md exactly: selector+offsets, then
-   prefix+quote+suffix, then the quote nearest its recorded position. */
-function resolveAnchor(a){
-  if (!S.doc) return null;
-  let el = null;
-  try { el = S.doc.querySelector(a.selector); } catch(_){}
-  if (el && el.textContent.slice(a.start_offset, a.end_offset) === a.quoted_text){
-    return rangeInElement(el, a.start_offset, a.end_offset);
-  }
-  buildTextIndex();
-  const T = S.textIndex ? S.textIndex.text : "";
-  let i = -1;
-  if (a.prefix || a.suffix){
-    const j = T.indexOf((a.prefix||"") + a.quoted_text + (a.suffix||""));
-    if (j >= 0) i = j + (a.prefix||"").length;
-  }
-  if (i < 0) i = nearestIndexOf(T, a.quoted_text, a.document_start_offset || 0);
-  if (i < 0) return null;
-  return rangeFromGlobal(i, i + a.quoted_text.length);
-}
+/* Thin shims over RedlineCore (web/redline-core.js). The logic lives there so
+   web/test.html can exercise it without the app's globals. */
+function resolveAnchor(a){ buildTextIndex(); return RedlineCore.resolveAnchor(S.doc, S.textIndex, a); }
+function rangeInElement(el, s, e){ return RedlineCore.rangeInElement(S.doc, el, s, e); }
+function rangeFromGlobal(gs, ge){ buildTextIndex(); return RedlineCore.rangeFromGlobal(S.doc, S.textIndex, gs, ge); }
 
 function rectsForRange(range){
   const win = $("#page").contentWindow;
