@@ -149,6 +149,19 @@ tr:last-child td{border-bottom:0;}
 td .nm{color:var(--ink); font-weight:600; display:block;}
 td.mono{font-family:var(--mono); font-size:18px; color:var(--coral); white-space:nowrap;}
 
+/* verdict table — slide 17 (the verification pass) */
+#s-verify td{padding:14px 20px 14px 0; font-size:20px; line-height:1.42;}
+#s-verify td .nm{font-size:21px; margin-bottom:2px;}
+#s-verify td.vd{padding-right:0;}
+.vchip{
+  display:inline-block; font-family:var(--mono); font-size:18px; letter-spacing:.13em;
+  text-transform:uppercase; line-height:1; padding:8px 13px; border-radius:999px;
+  border:1px solid currentColor; white-space:nowrap;
+}
+.vchip.ok{color:var(--teal); background:rgba(69,214,196,.10);}
+.vchip.hold{color:var(--gold); background:rgba(242,184,75,.10);}
+.vchip.hot{color:var(--coral); background:rgba(255,106,85,.10);}
+
 /* code / env-var lines */
 code, .code{font-family:var(--mono); font-size:19px; color:var(--ink);
   background:rgba(255,106,85,.10); border:1px solid rgba(255,106,85,.22);
@@ -392,7 +405,7 @@ body.ov #ovhint{display:block;}
     <b>Speaker notes · open</b>
     <ul>
       <li>Set the frame in one line: this release is about the <i>economics of daily use</i> — near-frontier intelligence you can afford to run all day.</li>
-      <li>Deck mechanics for me: <i>N</i> toggles these notes, <i>O</i> is the slide grid, <i>F</i> fullscreen. Slide 7 (the map) and slide 14 (demo hub) are the two slides I stay on longest.</li>
+      <li>Deck mechanics for me: <i>N</i> toggles these notes, <i>O</i> is the slide grid, <i>F</i> fullscreen. Slide 7 (the map) and slide 15 (demo hub) are the two slides I stay on longest.</li>
       <li>Timing: hook 2 · lineup 2 · what changed 3 · map 3 · checklist 3 · workflows 5 · demo 8 · quick hits 2 · close 2.</li>
     </ul>
   </aside>
@@ -807,7 +820,66 @@ body.ov #ovhint{display:block;}
   </aside>
 </section></div>
 
-<!-- ============================== 11 · DYNAMIC WORKFLOWS ============================== -->
+<!-- ============================== 11 · THE TRIAL PERIOD ============================== -->
+<div class="cell"><section class="slide">
+  <div class="rh"><span>Making the most of Claude Opus 5</span><span class="rh-sec">Migration checklist</span></div>
+  <div class="body">
+    <div class="eyebrow">Migration · every major model release</div>
+    <h2 style="font-size:64px; margin-bottom:30px;">The trial period: <span class="ac">re-derive the harness</span>.</h2>
+    <ol class="numlist" style="gap:26px;">
+      <li>
+        <span class="n">1</span>
+        <div>
+          <h3 style="font-size:27px; margin-bottom:5px;">Archive, then delete</h3>
+          <p style="font-size:20.5px; max-width:1560px;">Move <span class="code plain" style="font-size:19px; padding:1px 8px; line-height:1.15;">CLAUDE.md · skills/ · hooks/</span> into an archive folder, so nothing is lost — then start the next session with <b style="color:var(--ink); font-weight:600;">none of it</b>.</p>
+        </div>
+      </li>
+      <li>
+        <span class="n">2</span>
+        <div>
+          <h3 style="font-size:27px; margin-bottom:5px;">Use it bare for a week — don't guess</h3>
+          <p style="font-size:20.5px; max-width:1560px;">“You don't want to guess what's the instruction that the model needs, because <b style="color:var(--ink); font-weight:600;">you might not predict it correctly</b>.” Run your real work. Watch.</p>
+        </div>
+      </li>
+      <li>
+        <span class="n">3</span>
+        <div>
+          <h3 style="font-size:27px; margin-bottom:5px;">Add a line back only after the <i>same</i> stumble, repeatedly</h3>
+          <p style="font-size:20.5px; max-width:1560px;">“Only when you see it repeatedly stumble on the same thing — that's when you add it back.” One stumble is noise. <b style="color:var(--ink); font-weight:600;">Three is a rule.</b></p>
+        </div>
+      </li>
+      <li>
+        <span class="n">4</span>
+        <div>
+          <h3 style="font-size:27px; margin-bottom:5px;">Charge rent per line</h3>
+          <p style="font-size:20.5px; max-width:1560px;">“The model is going to read this instruction every single time you use it.” Every line costs context on every turn. A config accumulating since Sonnet 3.5 isn't memory — it's <b style="color:var(--ink); font-weight:600;">scar tissue from models that no longer exist</b>.</p>
+        </div>
+      </li>
+      <li>
+        <span class="n">5</span>
+        <div>
+          <h3 style="font-size:27px; margin-bottom:5px;">Keep evals — expect them to saturate</h3>
+          <p style="font-size:20.5px; max-width:1560px;">Code and prompts get deleted; evals outlive them by “maybe one, two, three model generations.” Then the model saturates them, and you write new ones from where it now struggles.</p>
+        </div>
+      </li>
+    </ol>
+    <div class="strip" style="margin-top:30px;">
+      <div class="kicker" style="font-size:30px;">The harness is something you <span class="ac">re-derive per model</span> — not an asset you maintain forever.</div>
+    </div>
+    <div class="mono-note" style="margin-top:18px;">Boris Cherny — creator of Claude Code · YC Startup School 2026.</div>
+  </div>
+  <div class="counter"></div>
+  <aside>
+    <b>Speaker notes · the trial period</b>
+    <ul>
+      <li><b>The two experiments he handed the room.</b> <code>claude --system-prompt "your minimal prompt"</code> replaces the whole system prompt. <code>CLAUDE_CODE_SIMPLE=1 claude</code> is undocumented — it strips <i>every</i> built-in prompt, tools included. His framing: it's Anthropic's own ablation switch. The model comes out <b>“a little bit more intelligent,”</b> but you lose the product guardrails that make it pleasant to drive. <b>An experiment, not a daily driver.</b></li>
+      <li><b>The five self-maintenance routines</b> — one-line prompts on a timer, all daily: <i>find dead code, open a PR deleting it</i> · <i>find experiments rolled out to 100%, remove the flag, ship the winning branch</i> · <i>write tests for the least-covered areas</i> · <i>delete tests that assert nothing useful or duplicate other tests</i> · <i>abstraction police: find near-duplicate abstractions and unify them</i>. <b>This is the bridge into Dynamic Workflows (next slide):</b> one-line prompts on a timer are the fan-out zone's economics. Anthropic runs <b>20–30 of these daily</b> across the CLI, iOS, Android and desktop apps.</li>
+      <li><b>Timer:</b> this slide extends section 5's 3-minute budget. If you're tight, <b>rows 1–3 are the keep</b> — archive and delete, a bare week, add back only on a repeated stumble. Rows 4 and 5 collapse into one sentence each.</li>
+    </ul>
+  </aside>
+</section></div>
+
+<!-- ============================== 12 · DYNAMIC WORKFLOWS ============================== -->
 <div class="cell"><section class="slide">
   <div class="rh"><span>Making the most of Claude Opus 5</span><span class="rh-sec">Dynamic Workflows</span></div>
   <div class="body">
@@ -849,7 +921,7 @@ body.ov #ovhint{display:block;}
   </aside>
 </section></div>
 
-<!-- ============================== 12 · GUARDRAILS & WIRING ============================== -->
+<!-- ============================== 13 · GUARDRAILS & WIRING ============================== -->
 <div class="cell"><section class="slide">
   <div class="rh"><span>Making the most of Claude Opus 5</span><span class="rh-sec">Dynamic Workflows</span></div>
   <div class="body">
@@ -897,7 +969,7 @@ body.ov #ovhint{display:block;}
   </aside>
 </section></div>
 
-<!-- ============================== 13 · TWO STORIES THAT SELL IT ============================== -->
+<!-- ============================== 14 · TWO STORIES THAT SELL IT ============================== -->
 <div class="cell"><section class="slide">
   <div class="rh"><span>Making the most of Claude Opus 5</span><span class="rh-sec">Dynamic Workflows</span></div>
   <div class="body">
@@ -936,7 +1008,7 @@ body.ov #ovhint{display:block;}
   </aside>
 </section></div>
 
-<!-- ============================== 14 · DEMO HUB ============================== -->
+<!-- ============================== 15 · DEMO HUB ============================== -->
 <div class="cell"><section class="slide">
   <div class="rh"><span>Making the most of Claude Opus 5</span><span class="rh-sec">Live demo</span></div>
   <div class="body">
@@ -994,7 +1066,7 @@ body.ov #ovhint{display:block;}
   </aside>
 </section></div>
 
-<!-- ============================== 15 · THREE ROUTING LAYERS ============================== -->
+<!-- ============================== 16 · THREE ROUTING LAYERS ============================== -->
 <div class="cell"><section class="slide">
   <div class="rh"><span>Making the most of Claude Opus 5</span><span class="rh-sec">Act 2 · smart routing</span></div>
   <div class="body">
@@ -1044,44 +1116,73 @@ body.ov #ovhint{display:block;}
   </aside>
 </section></div>
 
-<!-- ============================== 16 · QUICK HITS ============================== -->
-<div class="cell"><section class="slide">
-  <div class="rh"><span>Making the most of Claude Opus 5</span><span class="rh-sec">Quick hits</span></div>
+<!-- ============================== 17 · THE VERIFICATION PASS ============================== -->
+<div class="cell"><section class="slide" id="s-verify">
+  <div class="rh"><span>Making the most of Claude Opus 5</span><span class="rh-sec">Act 3 · the verification pass</span></div>
   <div class="body">
-    <div class="eyebrow">Quick hits</div>
-    <h2 style="margin-bottom:40px;">Two rooms, two lists.</h2>
-    <div class="cards c2" style="align-items:stretch; gap:32px;">
-      <div class="card" style="padding:34px 36px;">
-        <span class="tag" style="color:var(--teal)">For platform engineers</span>
-        <table>
-          <tr><td><span class="nm">Mid-conversation tool changes</span>No cache invalidation. <span style="color:var(--dim)">(beta)</span></td></tr>
-          <tr><td><span class="nm">Automatic fallbacks</span>Safety-flagged requests route instead of block. <span style="color:var(--dim)">(beta)</span></td></tr>
-          <tr><td><span class="nm">Org-wide default models</span>Team and Enterprise.</td></tr>
-          <tr><td><span class="nm">No data-retention requirement</span>For general access.</td></tr>
-        </table>
+    <div class="eyebrow">Act 3 output · run 2026-07-31</div>
+    <h2 style="margin-bottom:30px;">Six claims went in. <span class="ac">Two came back.</span></h2>
+    <table>
+      <thead><tr>
+        <th style="width:330px;">Claim</th><th>What checking found</th><th class="vd" style="width:250px;">Verdict</th>
+      </tr></thead>
+      <tbody>
+        <tr>
+          <td><span class="nm">$5 / $25 price</span></td>
+          <td>Resellers publish the same number because they <i>resell at it</i>. Propagation, not corroboration.</td>
+          <td class="vd"><span class="vchip ok">confirmed</span></td>
+        </tr>
+        <tr>
+          <td><span class="nm">July 24 ship date</span></td>
+          <td>An administrative fact — an event Anthropic schedules. Independently reported.</td>
+          <td class="vd"><span class="vchip ok">confirmed</span></td>
+        </tr>
+        <tr>
+          <td><span class="nm">Frontier-Bench 43.3</span>“new SOTA”</td>
+          <td>Every instance traces to one internal Anthropic run; the maintainers haven't published the dataset or the code. Epoch AI — genuinely independent — has Opus 5 and Fable 5 effectively tied.</td>
+          <td class="vd"><span class="vchip hold">self-reported</span></td>
+        </tr>
+        <tr>
+          <td><span class="nm">CursorBench near-parity</span></td>
+          <td>Cursor alone builds, runs, grades and publishes it. BenchLM excludes it from scoring for exactly that reason.</td>
+          <td class="vd"><span class="vchip hold">single-channel</span></td>
+        </tr>
+        <tr>
+          <td><span class="nm">Fast mode ~2.5× speed</span></td>
+          <td>The price is verified live. No independent throughput measurement exists — a hole where a test should be.</td>
+          <td class="vd"><span class="vchip hold">unmeasured</span></td>
+        </tr>
+        <tr>
+          <td><span class="nm">ARC-AGI-3 30.2%</span></td>
+          <td>The only claim with an independent administrator — and the only one that drew a live dispute. OpenAI's <span style="white-space:nowrap">2026-07-30</span> post: 38.3% with two settings.</td>
+          <td class="vd"><span class="vchip hot">disputed</span></td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="cards c2" style="gap:24px; margin-top:30px;">
+      <div class="strip">
+        <div class="kicker" style="font-size:28px;">The survivors aren't the <i>true</i> claims — they're the <span class="ac">administrative</span> ones.</div>
       </div>
-      <div class="card" style="padding:34px 36px;">
-        <span class="tag" style="color:var(--purple)">For designers</span>
-        <table>
-          <tr><td><span class="nm">Much stronger visual output</span>Animations, 3D, interactive artifacts.</td></tr>
-          <tr><td><span class="nm">Frontend self-checking</span>It opened its pages at desktop <i>and</i> phone widths, caught a product below the mobile fold, and fixed it before handing back.</td></tr>
-          <tr><td><span class="nm">Vision, with tools</span>Works best when it can crop and verify iteratively — give it the scissors.</td></tr>
-        </table>
+      <div class="strip teal">
+        <div class="kicker" style="font-size:28px;">Contradiction is a marker of instrumentation. <span style="color:var(--teal)">Read silence as a warning, not a clearance.</span></div>
       </div>
     </div>
   </div>
   <div class="counter"></div>
   <aside>
-    <b>Speaker notes · quick hits (2 min, brisk)</b>
+    <b>Speaker notes · the verification pass (§3a, ~2 min — optional but strong)</b>
     <ul>
-      <li>Two minutes total. Read the bold lines only; the detail is for the photograph.</li>
-      <li>The designer item that always gets a reaction: it checked its own work at two widths and caught a product below the mobile fold <i>before</i> handing back. Callback to Act 1's two-width verification note.</li>
-      <li>Platform framing: the two betas are about keeping long-lived agents alive — tool changes without cache invalidation, and fallbacks instead of hard blocks.</li>
+      <li><b>What sorted these claims was infrastructure, not honesty.</b> A claim survived if an apparatus existed for an <i>outsider</i> to run the test. Frontier-Bench: dataset and code unpublished, so it is unreproducible even in principle. Fast mode: no independent throughput measurement exists at all. CursorBench: one company builds, runs and grades it. Say “Anthropic-reported” out loud for everything below the top two rows.</li>
+      <li><b>ARC-AGI-3 is the exception that proves the rule.</b> It's the only launch claim whose benchmark has an independent administrator running its own evals on a published harness — and it's the only one that produced a live adversarial dispute. <b>Q&amp;A landmine, get there first:</b> on <b>2026-07-30</b> OpenAI published <i>“How two settings tripled our ARC-AGI-3 scores”</i> — GPT-5.6 Sol at <b>38.3%</b> on the public set vs Opus 5's <b>30.2%</b>, using two general Responses API settings. ARC Prize's co-founder confirmed the settings are legitimate but off-leaderboard for parity. It is OpenAI self-reported and unreplicated on a private set — say so — but if you assert unqualified Opus dominance and someone read that post, you're on the back foot.</li>
+      <li><b>The line:</b> <i>a vendor number that draws fire is better-evidenced than one that draws applause — because drawing fire means someone was equipped to check it.</i> Read silence as a warning, not a clearance.</li>
+      <li><b>The meta-beat, if you want it:</b> this table was produced by the Act 3 workflow, and it fact-checked <i>this talk</i>. <b>Three claims on these slides did not survive.</b> That is the demo arguing with the talk.</li>
+      <li><b>Timer:</b> if you're running long, <b>skip this slide</b> and hold it as Q&amp;A ammunition — it doubles as the answer to any benchmark challenge from the room.</li>
+      <li>Full article, written by the workflow: <code>talk/thread.html</code>. Outline §3a.</li>
     </ul>
   </aside>
 </section></div>
 
-<!-- ============================== 17 · CLOSE ============================== -->
+<!-- ============================== 18 · CLOSE ============================== -->
 <div class="cell"><section class="slide glow">
   <div class="rh"><span>Making the most of Claude Opus 5</span><span class="rh-sec">Close</span></div>
   <div class="body">
@@ -1097,13 +1198,19 @@ body.ov #ovhint{display:block;}
     <b>Speaker notes · close</b>
     <ul>
       <li>Say all three, then stop talking. No new facts after this slide.</li>
-      <li>If the demo ran long, this is the slide to land on directly from slide 14 — skip 15 and 16.</li>
-      <li>Q&amp;A pockets I'm holding: the zone shading (slide 8 notes), "why would Haiku pick the model" (slide 15 notes), "isn't this just LangGraph?" (slide 13 notes).</li>
+      <li>If the demo ran long, this is the slide to land on directly from slide 15 — skip 16 and 17.</li>
+      <li>Q&amp;A pockets I'm holding: the zone shading (slide 8 notes), "why would Haiku pick the model" (slide 16 notes), "isn't this just LangGraph?" (slide 14 notes).</li>
+    </ul>
+    <b style="margin-top:14px;">Optional 30-sec verbal quick hits (cut first)</b>
+    <ul>
+      <li><b>Platform:</b> mid-conversation tool changes without cache invalidation <i>(beta)</i> · automatic fallbacks so safety-flagged requests route instead of block <i>(beta)</i> · org-wide default models (Team/Enterprise) · no data-retention requirement for general access.</li>
+      <li><b>Designers:</b> much stronger visual output (animations, 3D, interactive artifacts) · frontend self-checks at desktop <i>and</i> phone widths — it caught a product below the mobile fold and fixed it before handing back · vision works best with tools to crop and verify iteratively.</li>
+      <li><i>Only if there's room.</i> The old "Quick hits" slide was dropped 2026-07-31 for the §3a verdict table. Act 2 and the redline demo already served both rooms — routing for platform, the two-width self-check for designers — so this is a callback, not new material.</li>
     </ul>
   </aside>
 </section></div>
 
-<!-- ============================== 18 · LINKS ============================== -->
+<!-- ============================== 19 · LINKS ============================== -->
 <div class="cell"><section class="slide">
   <div class="rh"><span>Making the most of Claude Opus 5</span><span class="rh-sec">Links</span></div>
   <div class="body">

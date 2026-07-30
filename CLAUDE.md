@@ -64,7 +64,7 @@ round N+1's canvas. A round is "pending" when it has `snapshot.html` but no `res
 
 The talk's three acts map onto this: Act 1 runs one round live, Act 2 shows routing (the read-only
 `explorer` agent, `model: haiku`), Act 3 fans out over every pending round via a generated workflow.
-`talk/slides.html` is the primary screen (18 slides, THE MAP embedded in slide 7);
+`talk/slides.html` is the primary screen (19 slides, THE MAP embedded in slide 7);
 `talk/slides.pdf` is projector/wifi insurance and must be re-exported whenever the HTML changes.
 
 ## Demo-critical invariants

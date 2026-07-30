@@ -73,6 +73,7 @@
 - ❌ Effort defaults carried over from 4.8 → recalibrated levels; re-run a sweep on your own evals.
 - ✅ ADD: explicit conciseness instructions, scope constraints, delegation caps, narration cadence.
 - Theme: **the model got more agentic, so your prompts should get less paranoid.**
+- *The operational sequel now has its own slide (**slide 11, "The trial period"**) — the Delete Protocol trial-period checklist, sourced from Boris Cherny's YC Startup School 2026 talk: archive then delete · a bare week, don't guess · add a line back only after the same stumble, repeatedly · charge rent per line · keep evals, expect them to saturate. Its speaker notes carry the two experiments (`claude --system-prompt`, `CLAUDE_CODE_SIMPLE=1`) and the five self-maintenance routines, which bridge into §6.*
 
 ## 6. Introduction to Dynamic Workflows (5 min)
 *(How Opus 5's delegation instincts become infrastructure.)*
@@ -162,6 +163,7 @@
 - [ ] Fold in Dustin's benchmark report when ready → recalibrate chart positions from it.
 
 ## 8. Quick Hits for Platform Engineers & Designers (2 min)
+*Slide dropped 2026-07-31 in favor of the §3a verdict table (slide 17); quick hits now live in the close slide's notes as an optional verbal beat.*
 - Platform: mid-conversation tool changes without cache invalidation (beta); automatic fallbacks so safety-flagged requests route instead of block (beta); org-wide default models for Team/Enterprise; no data-retention requirement for general access.
 - Designers: much stronger visual output (animations, 3D, interactive artifacts); frontend self-checking — it opened its pages at desktop *and* phone widths, caught a product below the mobile fold, fixed it before handing back; vision works best with tools to crop/verify iteratively.
 
