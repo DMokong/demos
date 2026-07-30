@@ -189,16 +189,6 @@
   }
   .mrow input:focus{outline:2px solid #3b82f6aa; outline-offset:-1px}
   .hint{color:var(--dim); font-size:12px; margin:0 0 16px}
-  .sesh{border:1px solid var(--line); border-radius:10px; margin-bottom:10px; overflow:hidden}
-  .sesh > .sh{display:flex; align-items:center; gap:8px; padding:9px 12px; background:var(--panel-2); border-bottom:1px solid var(--line)}
-  .sesh .sid{font:12px/1 var(--mono); color:var(--muted)}
-  .sesh .stitle{font-size:12.5px; color:var(--ink); font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
-  .rnd{display:flex; align-items:center; gap:8px; padding:8px 12px; border-top:1px solid #ffffff08}
-  .rnd:first-child{border-top:0}
-  .rnd .rn{font:12px/1 var(--mono); color:var(--ink); width:66px; flex:none}
-  .tag{font:10.5px/1 var(--mono); border-radius:999px; padding:4px 7px; border:1px solid var(--line); color:var(--dim)}
-  .tag.done{color:#7ee2a8; border-color:#1d4c33}
-  .tag.pend{color:#f0b429; border-color:#5a4413}
   .empty{color:var(--dim); font-size:13px; text-align:center; padding:22px 0}
 
   /* ---------- misc ---------- */
@@ -315,14 +305,12 @@
     </div>
     <div class="mbody">
       <div class="mrow">
-        <input type="text" id="openInput" placeholder="https://example.com   ·   ./sample/article.html   ·   inbox/&lt;session&gt;/round-1/result.html" spellcheck="false">
+        <input type="text" id="openInput" placeholder="https://example.com   ·   ./sample/article.html   ·   ~/Downloads/redline-article-r1.html" spellcheck="false">
         <button class="btn primary" id="openGo">Open</button>
       </div>
-      <p class="hint">A URL, a local file, or a previous round's <code>result.html</code>. Opening a result continues that session — the next packet is the next round.
+      <p class="hint">A URL, a local file, or the document an agent edited last round. Its annotations come back with it — the documents drawer in the gutter lists everything you have marked up.
         <button class="btn ghost" id="sampleBtn" style="margin-left:6px">Use the sample draft article</button>
       </p>
-      <h2 style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);margin:0 0 8px">Inbox <span id="inboxRoot" style="text-transform:none;letter-spacing:0"></span></h2>
-      <div id="inboxList"><div class="empty">loading…</div></div>
     </div>
   </div>
 </div>
@@ -446,14 +434,15 @@ async function loadSnapshot(id){
   const snap = await r.json();
   S.snap = snap;
   S.draw = []; S.highlights = []; S.dseq = 0; S.hseq = 0;
-  document.title = "redline · " + (snap.source && snap.source.title ? snap.source.title : "round " + snap.round);
+  document.title = "redline · " + (snap.source && snap.source.title ? snap.source.title : "untitled");
   updateIdent();
   document.body.dataset.loaded = "1";   // the stage stays hidden until there is something in it
   await mountDoc(snap.html);
   closePanel();
-  if (snap.continues_session) {
-    toast("round " + snap.round + " of " + snap.session_id + " — continuing the session");
-  }
+  // The round and the annotations belong to the document, not to the server:
+  // afterMount() has just restored both from IndexedDB.
+  if (S.highlights.length) toast(S.highlights.length + " annotation(s) restored · round " + ((S.round || 0) + 1));
+  updateIdent();
 }
 
 function mountDoc(html){
@@ -1357,7 +1346,7 @@ async function setPageWidth(w){
   await measureDoc();
   buildTextIndex();
   // Re-resolve every anchor against the new layout. If this ever fails, the
-  // packet would have been unusable anyway — better to see it now.
+  // bundle would have been unusable anyway — better to see it now.
   let lost = 0;
   for (const h of S.highlights){
     const r = resolveAnchor(h.anchor);
@@ -1419,45 +1408,10 @@ async function importBundle(file){
 }
 
 /* =========================================================================
-   8. Inbox browser
+   8. Opening a document
+   The server lists nothing: what you have annotated before lives in
+   IndexedDB and is offered by the documents drawer (renderDocSwitcher).
    ========================================================================= */
-async function refreshInbox(){
-  const list = $("#inboxList");
-  list.innerHTML = '<div class="empty">loading…</div>';
-  try {
-    const r = await fetch("/inbox", {cache:"no-store"});
-    const data = await r.json();
-    $("#inboxRoot").textContent = data.root ? "· " + data.root : "";
-    if (!data.sessions || !data.sessions.length){
-      list.innerHTML = '<div class="empty">no rounds yet — export one and it shows up here</div>';
-      return;
-    }
-    list.innerHTML = data.sessions.map(sesh => {
-      const rounds = sesh.rounds.map(rd => {
-        const tags = [];
-        if (rd.has_snapshot) tags.push('<span class="tag">packet</span>');
-        if (rd.has_result) tags.push('<span class="tag done">result</span>');
-        if (rd.pending) tags.push('<span class="tag pend">awaiting agent</span>');
-        const btns = [];
-        if (rd.has_result){
-          btns.push('<button class="btn primary" data-open="' + esc(rd.dir) + '/result.html">Annotate result → round ' + (sesh.rounds[sesh.rounds.length-1].round + 1) + '</button>');
-        }
-        if (rd.has_snapshot){
-          btns.push('<button class="btn ghost" data-open="' + esc(rd.dir) + '/snapshot.html">snapshot</button>');
-        }
-        return '<div class="rnd"><span class="rn">round ' + rd.round + '</span>' +
-               tags.join(" ") + '<span class="spacer"></span>' + btns.join(" ") + '</div>';
-      }).join("");
-      return '<div class="sesh"><div class="sh"><span class="sid">' + esc(sesh.session_id) + '</span>' +
-             '<span class="stitle">' + esc(sesh.title || "") + '</span></div>' + rounds + "</div>";
-    }).join("");
-    list.querySelectorAll("[data-open]").forEach(b =>
-      b.addEventListener("click", () => openPath(b.dataset.open)));
-  } catch (err){
-    list.innerHTML = '<div class="empty">could not read the inbox: ' + esc(err.message) + "</div>";
-  }
-}
-
 async function openPath(path, isURL){
   busy(true, "snapshotting…");
   try {
@@ -1516,8 +1470,10 @@ function updateCounts(){
 function updateIdent(){
   if (!S.snap){ $("#ident").textContent = "no page"; return; }
   const s = S.snap;
-  $("#ident").innerHTML = "<b>round " + s.round + "</b> · " + esc(s.session_id) +
-    (s.parent_round != null ? " ← round " + s.parent_round : "");
+  // Identity is the document, and the round is how many times it has gone
+  // round the loop — both come from the store, never from the server.
+  $("#ident").innerHTML = "<b>round " + ((S.round || 0) + 1) + "</b> · " +
+    esc(S.docKey || (s.source ? s.source.ref : "unknown"));
   $("#ident").title = (s.source ? s.source.kind + ": " + s.source.ref : "");
 }
 
@@ -1583,7 +1539,6 @@ function clearMarks(){
 function openPanel(force){
   $("#openScrim").classList.add("open");
   $("#openClose").style.display = force ? "none" : "";
-  refreshInbox();
   setTimeout(() => $("#openInput").focus(), 30);
 }
 function closePanel(){ $("#openScrim").classList.remove("open"); }

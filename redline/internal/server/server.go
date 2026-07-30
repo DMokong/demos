@@ -1,9 +1,10 @@
 // Package server wires redline's HTTP surface.
 //
-// Every handler here is a plain http.Handler registered on a stdlib mux and
-// every write goes through packet.Store. That is deliberate: the same
-// handlers are meant to mount inside the existing Go Lambda service later,
-// with an S3-backed store, without touching this file.
+// Every handler here is a plain http.Handler registered on a stdlib mux, and
+// the server keeps no durable state at all: it freezes a page and serves the
+// app. The round itself lives in the browser (IndexedDB) and travels as a
+// downloaded bundle, so these handlers can mount inside the existing Go
+// service later without dragging storage along.
 package server
 
 import (
@@ -21,29 +22,33 @@ import (
 	"sync"
 	"time"
 
-	"redline/internal/packet"
 	"redline/internal/snapshot"
 )
 
 const maxJSONBytes = 2 << 20
 
-// Snapshot is one frozen document held in memory for the life of the process.
-// It carries the session bookkeeping that tells the frontend whether this is
-// round 1 of something new or round N+1 of an ongoing conversation.
-type Snapshot struct {
-	ID          string
-	HTML        string
-	Source      packet.Source
-	SessionID   string
-	ParentRound *int
-	ParentRef   string
-	Round       int // provisional; the authoritative number is taken at export
-	CreatedAt   time.Time
+// Source records where the annotated content came from. The frontend derives
+// a document identity from it, so the same page opened by path and by URL does
+// not split into two annotation sets.
+type Source struct {
+	// Kind is "url", "file" or "sample".
+	Kind      string   `json:"kind"`
+	Ref       string   `json:"ref"`
+	Title     string   `json:"title,omitempty"`
+	FetchedAt string   `json:"fetched_at,omitempty"`
+	Notes     []string `json:"notes,omitempty"`
 }
 
-// Server holds the snapshot cache and the packet store.
+// Snapshot is one frozen document held in memory for the life of the process.
+type Snapshot struct {
+	ID        string
+	HTML      string
+	Source    Source
+	CreatedAt time.Time
+}
+
+// Server holds the snapshot cache.
 type Server struct {
-	store  packet.Store
 	assets fs.FS
 	sample []byte
 	opts   snapshot.Options
@@ -55,9 +60,8 @@ type Server struct {
 
 // New builds a Server. assets must contain web/app.html; sample is the
 // embedded demo article (may be nil).
-func New(store packet.Store, assets fs.FS, sample []byte, opts snapshot.Options) *Server {
+func New(assets fs.FS, sample []byte, opts snapshot.Options) *Server {
 	return &Server{
-		store:  store,
 		assets: assets,
 		sample: sample,
 		opts:   opts,
@@ -70,12 +74,11 @@ func New(store packet.Store, assets fs.FS, sample []byte, opts snapshot.Options)
 //	GET  /                 the app
 //	GET  /view/{id}        the app, focused on a snapshot
 //	GET  /js/{name}        a frontend script from web/
-//	POST /snapshot         {url|path|sample} -> snapshot id + session/round
+//	POST /snapshot         {url|path|sample} -> snapshot id
 //	GET  /snapshot/{id}    the frozen HTML + metadata (for iframe srcdoc)
-//	GET  /inbox            sessions/rounds listing
 //
-// There is no export route: a round is downloaded by the browser as a single
-// self-contained bundle, so nothing leaves the page through this server.
+// There is no export route and no round listing: a round is downloaded by the
+// browser as one self-contained bundle, so nothing leaves through this server.
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /{$}", s.handleApp)
@@ -83,9 +86,8 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /js/{name}", s.handleAsset)
 	mux.HandleFunc("POST /snapshot", s.handleCreateSnapshot)
 	mux.HandleFunc("GET /snapshot/{id}", s.handleGetSnapshot)
-	mux.HandleFunc("GET /inbox", s.handleInbox)
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
-		writeJSON(w, http.StatusOK, map[string]any{"ok": true, "inbox": s.store.Root()})
+		writeJSON(w, http.StatusOK, map[string]any{"ok": true})
 	})
 	return logging(mux)
 }
@@ -136,16 +138,11 @@ type snapshotRequest struct {
 }
 
 type snapshotResponse struct {
-	ID          string        `json:"id"`
-	ViewURL     string        `json:"view_url"`
-	SessionID   string        `json:"session_id"`
-	Round       int           `json:"round"`
-	ParentRound *int          `json:"parent_round"`
-	ParentRef   string        `json:"parent_ref,omitempty"`
-	Source      packet.Source `json:"source"`
-	Title       string        `json:"title"`
-	Notes       []string      `json:"notes,omitempty"`
-	Continues   bool          `json:"continues_session"`
+	ID      string   `json:"id"`
+	ViewURL string   `json:"view_url"`
+	Source  Source   `json:"source"`
+	Title   string   `json:"title"`
+	Notes   []string `json:"notes,omitempty"`
 }
 
 func (s *Server) handleCreateSnapshot(w http.ResponseWriter, r *http.Request) {
@@ -159,7 +156,7 @@ func (s *Server) handleCreateSnapshot(w http.ResponseWriter, r *http.Request) {
 	var (
 		res *snapshot.Result
 		err error
-		src packet.Source
+		src Source
 	)
 
 	switch {
@@ -201,6 +198,8 @@ func (s *Server) handleCreateSnapshot(w http.ResponseWriter, r *http.Request) {
 	src.FetchedAt = time.Now().UTC().Format(time.RFC3339)
 	src.Notes = res.Notes
 
+	// No session bookkeeping lives here: the round number and the annotation
+	// set belong to the document's record in the browser, keyed by source.
 	snap := &Snapshot{
 		ID:        s.nextID(),
 		HTML:      res.HTML,
@@ -208,46 +207,16 @@ func (s *Server) handleCreateSnapshot(w http.ResponseWriter, r *http.Request) {
 		CreatedAt: time.Now().UTC(),
 	}
 
-	// The loop: if this document is a previous round's output, the new packet
-	// continues that session instead of starting a fresh one.
-	continues := false
-	if src.Kind == "file" || src.Kind == "result" {
-		if session, round, name, ok := s.store.Locate(src.Ref); ok {
-			snap.SessionID = session
-			pr := round
-			snap.ParentRound = &pr
-			snap.ParentRef = fmt.Sprintf("round-%d/%s", round, name)
-			if name == packet.FileResult {
-				snap.Source.Kind = "result"
-			}
-			continues = true
-		}
-	}
-	if snap.SessionID == "" {
-		snap.SessionID = s.store.NewSessionID()
-	}
-	next, err := s.store.NextRound(snap.SessionID)
-	if err != nil {
-		writeErr(w, http.StatusInternalServerError, err)
-		return
-	}
-	snap.Round = next
-
 	s.mu.Lock()
 	s.snaps[snap.ID] = snap
 	s.mu.Unlock()
 
 	writeJSON(w, http.StatusOK, snapshotResponse{
-		ID:          snap.ID,
-		ViewURL:     "/view/" + snap.ID,
-		SessionID:   snap.SessionID,
-		Round:       snap.Round,
-		ParentRound: snap.ParentRound,
-		ParentRef:   snap.ParentRef,
-		Source:      snap.Source,
-		Title:       snap.Source.Title,
-		Notes:       res.Notes,
-		Continues:   continues,
+		ID:      snap.ID,
+		ViewURL: "/view/" + snap.ID,
+		Source:  snap.Source,
+		Title:   snap.Source.Title,
+		Notes:   res.Notes,
 	})
 }
 
@@ -257,36 +226,10 @@ func (s *Server) handleGetSnapshot(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusNotFound, errors.New("unknown snapshot"))
 		return
 	}
-	// Round may have moved on since the snapshot was taken (another export).
-	round, err := s.store.NextRound(snap.SessionID)
-	if err == nil {
-		snap.Round = round
-	}
 	writeJSON(w, http.StatusOK, map[string]any{
-		"id":                snap.ID,
-		"html":              snap.HTML,
-		"source":            snap.Source,
-		"session_id":        snap.SessionID,
-		"round":             snap.Round,
-		"parent_round":      snap.ParentRound,
-		"parent_ref":        snap.ParentRef,
-		"continues_session": snap.ParentRound != nil,
-		"inbox_root":        s.store.Root(),
-	})
-}
-
-func (s *Server) handleInbox(w http.ResponseWriter, r *http.Request) {
-	sessions, err := s.store.Sessions()
-	if err != nil {
-		writeErr(w, http.StatusInternalServerError, err)
-		return
-	}
-	if sessions == nil {
-		sessions = []packet.SessionInfo{}
-	}
-	writeJSON(w, http.StatusOK, map[string]any{
-		"root":     s.store.Root(),
-		"sessions": sessions,
+		"id":     snap.ID,
+		"html":   snap.HTML,
+		"source": snap.Source,
 	})
 }
 

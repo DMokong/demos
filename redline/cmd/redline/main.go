@@ -1,4 +1,5 @@
-// Command redline serves the annotation UI and writes round packets.
+// Command redline serves the annotation UI. Rounds are downloaded by the
+// browser as self-contained bundles; nothing is written here.
 //
 //	go build ./cmd/redline && ./redline serve
 package main
@@ -16,20 +17,18 @@ import (
 	"time"
 
 	"redline"
-	"redline/internal/packet"
 	"redline/internal/server"
 	"redline/internal/snapshot"
 )
 
-const usage = `redline - annotate a page, export a round, hand it to an agent.
+const usage = `redline - annotate a page, download a round, hand it to an agent.
 
 usage:
-  redline serve [-port 8787] [-addr 127.0.0.1] [-inbox ./inbox]
+  redline serve [-port 8787] [-addr 127.0.0.1]
 
 flags:
   -port    port to listen on (default 8787)
   -addr    interface to bind (default 127.0.0.1; use 0.0.0.0 to share)
-  -inbox   packet directory (default ./inbox)
 `
 
 func main() {
@@ -56,14 +55,8 @@ func serve(args []string) error {
 	fs := flag.NewFlagSet("serve", flag.ExitOnError)
 	port := fs.Int("port", 8787, "port to listen on")
 	addr := fs.String("addr", "127.0.0.1", "interface to bind")
-	inbox := fs.String("inbox", "./inbox", "packet directory")
 	if err := fs.Parse(args); err != nil {
 		return err
-	}
-
-	store, err := packet.NewLocalDir(*inbox)
-	if err != nil {
-		return fmt.Errorf("inbox: %w", err)
 	}
 
 	sample, err := readSample()
@@ -71,13 +64,13 @@ func serve(args []string) error {
 		return err
 	}
 
-	srv := server.New(store, assetFS(), sample, snapshot.DefaultOptions())
+	srv := server.New(assetFS(), sample, snapshot.DefaultOptions())
 	hostport := net.JoinHostPort(*addr, fmt.Sprint(*port))
 	httpSrv := &http.Server{
 		Addr:              hostport,
 		Handler:           srv.Handler(),
 		ReadHeaderTimeout: 10 * time.Second,
-		// Exports carry a full-page PNG; give them room.
+		// A snapshot inlines every image as a data URI; give it room.
 		WriteTimeout: 120 * time.Second,
 		ReadTimeout:  120 * time.Second,
 	}
@@ -87,17 +80,15 @@ func serve(args []string) error {
 		return err
 	}
 
-	abs, _ := filepath.Abs(*inbox)
 	fmt.Printf(`
   redline
 
   ui      http://%s/
-  inbox   %s
 
   open the sample article from the UI, annotate it, hit Export.
-  then: "Process the newest round in ./inbox using the redline skill."
+  then: "Process the redline bundle at <the file you just downloaded>."
 
-`, hostport, abs)
+`, hostport)
 
 	idle := make(chan struct{})
 	go func() {

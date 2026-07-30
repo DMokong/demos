@@ -1,15 +1,15 @@
 ---
 name: redline
-description: Process a redline round — apply a human's page annotations (draw marks and anchored highlight comments) to snapshot.html and write result.html plus changes.md. Use when pointed at a packet directory, a round dir under ./inbox, "the newest round in ./inbox", or any manifest.json/annotations.json produced by the redline tool.
+description: Process a redline round — apply a human's page annotations (anchored highlight comments) to the annotated document and write the edited document plus changes.md. Use when pointed at a redline bundle — a downloaded redline-<slug>-r<N>.html, "process this redline bundle", or any .html file carrying a <script type="application/redline+json" id="redline-state"> block.
 ---
 
 # redline — process one round of a co-authoring loop
 
-You are the other half of a two-party loop. A human annotated a page; that packet
-is their turn. You produce `result.html` + `changes.md`; that is your turn. They
-open your `result.html` back in redline and annotate again. Round N+1 is a
-different conversation than round N — behave like a collaborator who will be
-read, not a formatter that will be diffed away.
+You are the other half of a two-party loop. A human annotated a page; the bundle
+they handed you is their turn. You produce the edited document + `changes.md`;
+that is your turn. They open your document back in redline and annotate again.
+Round N+1 is a different conversation than round N — behave like a collaborator
+who will be read, not a formatter that will be diffed away.
 
 ---
 
@@ -22,7 +22,7 @@ read, not a formatter that will be diffed away.
   unless an annotation asks for a proofread.
 - Do not reformat the HTML. No re-indenting, no attribute reordering, no
   prettifier, no minifier, no tag normalisation, no "while I was in there".
-  Copy `snapshot.html` and edit in place with surgical string edits.
+  Copy the document you were given and edit in place with surgical string edits.
 - Do not touch `<head>`, `<style>`, scripts, classes, or ids unless an
   annotation is about layout or styling.
 - Minimal diff is the goal. If a note says "tighten this paragraph", one
@@ -31,97 +31,102 @@ read, not a formatter that will be diffed away.
   edit.
 
 The author's words are the product. You are editing someone's draft in their
-house. `diff snapshot.html result.html` should read like a review, not a rewrite.
+house. Diffing the document you were given against the one you write should read
+like a review, not a rewrite.
 
 ---
 
 ## 1. Trigger and scope
 
-Triggers: "process the newest round in ./inbox", a path to a round directory, a
-packet, a `manifest.json`, or "run the redline skill on …".
+Triggers: a path to a redline bundle, "process this redline bundle", or a `.html`
+file containing a `<script type="application/redline+json" id="redline-state">`
+block.
 
-**Find the round.** Newest = the round directory with a `snapshot.html` and
-**no** `result.html` (`manifest.json` → `"round"`, and the parent chain via
-`parent_round`). Layout:
+**The bundle is the page.** One file carries both the document and the state:
 
-```
-inbox/<session-id>/round-<N>/
-  manifest.json      # identity, source, viewport, counts   (read first)
-  annotations.json   # the actual instructions              (the work)
-  annotated.png      # flattened visual — optional, best effort
-  snapshot.html      # the exact content annotated          (NEVER modify)
-  result.html        # YOU WRITE THIS
-  changes.md         # YOU WRITE THIS
-```
+    redline-<slug>-r<N>.html
+      <html>…</html>                     the document, exactly as annotated
+      <script type="application/redline+json" id="redline-state">
+        { schema_version, document_key, round, annotations[], responses{} }
 
-**More than one pending round.** `./inbox` routinely holds several sessions at
-once, and more than one of them can be pending (has `snapshot.html`, no
-`result.html`) at the same time. When the request names a single round ("the
-newest round"), pick the pending round with the latest `manifest.json` →
-`created_at`; if those are missing or equal, pick the most recently modified
-`round-<N>` directory. Then name the session you chose **and** the pending
-sessions you skipped in changes.md → *Assumptions*. Choose and proceed — do not
-stop to ask which one. When the request instead covers *every* pending round
-(one agent per session), process them all, one round dir per session.
+Read `schema_version` before anything else; this skill handles `"2.0"`. If the
+file has no block, it is not a bundle — say so and stop rather than guessing.
 
-One round dir = one unit of work. Do not edit other rounds, other sessions, or
-the tool's source.
+One bundle = one unit of work. Do not edit other bundles, and do not edit the
+tool's source.
+
+---
+
+## 1a. Which document do you edit
+
+1. An explicit path the user names → that file.
+2. The source you **already have in session context** — you published or
+   generated the page during this conversation → that file.
+3. Neither → the bundled document itself.
+
+Rung 2 requires knowledge you already hold. Do **not** search the filesystem
+for a plausible source, infer one from the page title, or match on content
+similarity. Editing the wrong file is the worst failure this tool can
+produce, and it is worse than falling through to rung 3. When in doubt, drop
+to rung 3 and say so.
+
+On rungs 1–2 the anchors were captured against *rendered* output, so CSS
+selectors and textContent offsets may not apply. Resolution degrades to
+quoted-text search. Report which rung you used and which resolution step
+succeeded, so a weak match is visible rather than silent.
 
 ---
 
 ## 2. Reading order (do not skip, do not reorder)
 
-1. **`manifest.json`** — `session_id`, `round`, `parent_round`, `source`,
-   `viewport` (the width the author was looking at), `counts` (how much work
-   this is), and `notes` (e.g. *annotated.png was omitted*).
-2. **`annotations.json`** — the instructions. Read all of them before editing
-   anything; two annotations often constrain each other.
-3. **`annotated.png`** — look at it if it exists. It shows the marks in place
-   and is the fastest way to understand a drawn arrow. If `manifest.notes` says
-   it was omitted, work from the anchors and the `rects` coordinates; say so in
-   changes.md → Verification.
-4. **`snapshot.html`** — read the regions the annotations point at, plus enough
-   around them to match voice and markup conventions. You do not need to read
-   the whole file to change two paragraphs.
+1. **The `redline-state` block** — `schema_version` first, then `document_key`,
+   `round`, and `viewport` (the width the author was looking at).
+2. **`annotations`** — the instructions. Read all of them before editing
+   anything; two annotations often constrain each other. `responses` from
+   earlier rounds is your own prior turn — read it so you do not repeat or
+   contradict yourself.
+3. **The document** — the one you picked in §1a. Read the regions the
+   annotations point at, plus enough around them to match voice and markup
+   conventions. You do not need to read the whole file to change two paragraphs.
 
-If `round > 1`, also skim the parent round's `changes.md`: it tells you what you
-already told this author, what they accepted, and what they are pushing back on.
+If `round > 1` and a previous `changes.md` sits beside the target, skim it: it
+tells you what you already told this author, what they accepted, and what they
+are pushing back on.
 
 ---
 
-## 3. annotations.json — the schema you will actually get
+## 3. The state block — the schema you will actually get
 
-Top level (`schema_version: "1.0"`):
+Top level (`schema_version: "2.0"`):
 
 ```jsonc
 {
-  "schema_version": "1.0",
-  "tool": "redline",
-  "created_at": "2026-07-29T18:00:00.000Z",
-  "session_id": "s-20260729-ab12cd",
-  "round": 1,
-  "parent_round": null,          // round number this content came from, or null
-  "parent_ref": "round-1/result.html",   // present only when continuing
-  "source": { "kind": "sample|file|url|result", "ref": "…", "title": "…",
-              "fetched_at": "…", "notes": ["…"] },   // notes: what would not inline
-  "viewport": { "width": 860, "height": 4200, "gutter_width": 320,
-                "device_pixel_ratio": 1 },
-  "draw": [ /* draw objects, in the order they were drawn */ ],
-  "highlights": [ /* highlight objects, in DOCUMENT order */ ]
+  "schema_version": "2.0",
+  "document_key": "file:///Users/d/src/article.html",  // identity, not a path
+  "round": 2,
+  "viewport": { "width": 860, "gutter_width": 320 },
+  "annotations": [ /* highlight objects, in DOCUMENT order */ ],
+  "responses": {  /* yours, from earlier rounds — see §9 */ }
 }
 ```
 
-`highlights` is sorted by position in the document, and `number` matches the
-badge in `annotated.png`. Work through them in that order: an edit near the top
-can shift nothing below it if you keep diffs minimal, but reading in order is
-how you notice two comments that constrain each other.
+`annotations` carries only the annotations still awaiting you: answered,
+dismissed and retired ones stay in the browser and never reach the bundle. It is
+sorted by position in the document. Work through it in that order: an edit near
+the top can shift nothing below it if you keep diffs minimal, but reading in
+order is how you notice two comments that constrain each other.
+
+Draw marks are page-pixel coordinates against one rendered layout, so they are
+round-scoped: redline retires them in the browser at round end and they do not
+appear in the block. §6 tells you how to read one if it ever reaches you by
+another route.
 
 **Highlight object** — a comment anchored to an exact text range:
 
 ```jsonc
 {
   "id": "h1",
-  "number": 1,                      // the badge number in annotated.png
+  "number": 1,                      // the badge number the author saw in the gutter
   "intent": "instruct",             // instruct | question | fact-check | expand | delete
   "comment": "tighten this — two sentences, not four",
   "anchor": {
@@ -136,7 +141,7 @@ how you notice two comments that constrain each other.
     "document_start_offset": 1804,           // same offsets into body.textContent
     "document_end_offset": 1941
   },
-  "rects": [ {"x": 40, "y": 612, "w": 780, "h": 19} ],  // page px, for the PNG
+  "rects": [ {"x": 40, "y": 612, "w": 780, "h": 19} ],  // page px at viewport.width
   "created_at": "…"
 }
 ```
@@ -159,7 +164,7 @@ how you notice two comments that constrain each other.
 }
 ```
 
-Coordinates are CSS pixels in the snapshot rendered at `viewport.width`, origin
+Coordinates are CSS pixels in the document rendered at `viewport.width`, origin
 at the document's top-left. `x >= viewport.width` means the mark is in the
 comment gutter, not on the page.
 
@@ -167,7 +172,7 @@ comment gutter, not on the page.
 
 ## 4. Locating an anchor (the algorithm, in order)
 
-Parse `snapshot.html` and, for each highlight:
+Parse the document you are editing and, for each annotation:
 
 1. **Selector + offsets.** `el = querySelector(anchor.selector)`. If
    `el.textContent.slice(start_offset, end_offset) === anchor.quoted_text`,
@@ -274,10 +279,11 @@ deliver the conservative result and put the question in *Assumptions* or
 
 Before writing changes.md:
 
-1. **Diff discipline.** Compare `result.html` against `snapshot.html` and
-   confirm every hunk traces to an annotation id. If a hunk does not, revert it.
-2. **Both widths.** Inspect the result at `manifest.viewport.width` (the width
-   the author annotated at) **and at 390px**. Look for: overflow, broken tables,
+1. **Diff discipline.** Compare your edited document against the one you were
+   given and confirm every hunk traces to an annotation id. If a hunk does not,
+   revert it.
+2. **Both widths.** Inspect the result at the block's `viewport.width` (the
+   width the author annotated at) **and at 390px**. Look for: overflow, broken tables,
    text collisions, anything your edit pushed below the fold on mobile. Use a
    headless browser if one is available; otherwise reason explicitly from the
    CSS and say that is what you did.
@@ -291,16 +297,37 @@ Report all four in *Verification*, including anything you could not check.
 
 ## 9. Output contract
 
-Write **into the same round directory**, and nowhere else:
+Write two things, beside the target you edited:
 
-- **`result.html`** — the full edited document. Never modify `snapshot.html`.
-- **`changes.md`** — exactly these five sections, in this order, every time,
-  even when empty (write "None." — an empty section is information):
+- **the edited document**, with its `redline-state` block updated so that
+  `responses` carries one entry per annotation you acted on:
+
+      "responses": {
+        "h2": { "kind": "replied", "text": "<your actual answer>" },
+        "h5": { "kind": "applied", "summary": "<what you changed, one line>" }
+      }
+
+  `kind` is `replied` (a question — no edit was made) or `applied` (you changed
+  the document). An annotation you could not resolve gets no entry at all.
+  Preserve every other field of the block untouched, and bump `round`.
+
+- **`changes.md`** — the same five sections, in the same order, as before:
+  Applied · Assumptions · Replies · Fact-check findings · Verification.
+
+**The block is canonical, and `changes.md` may not contain a claim absent from
+it.** If the two disagree the UI and the prose start telling the reader
+different stories. Write the block first, then render the prose from it.
+
+Also state which rung of §1a you edited on, and which resolution step of §4
+each anchor landed on — a weak match must be visible, never silent.
+
+`changes.md`, in full — every section every time, even when empty (write
+"None." — an empty section is information):
 
 ```markdown
 # Round <N> — <short title>
 
-Session <session-id> · <M> annotations (<k> highlights, <j> draw marks)
+`<document_key>` · <M> annotations
 
 ## Applied
 - **[h1 · instruct]** "<anchor quote, trimmed>" → what you changed, in one line.
@@ -328,22 +355,23 @@ Session <session-id> · <M> annotations (<k> highlights, <j> draw marks)
 - Not checked: <anything you could not verify, and why>.
 ```
 
-Close your reply to the user with the loop, not with a victory lap:
+Close your reply to the user with the loop, not a victory lap:
 
-> Round N is written to `inbox/<session>/round-N/`. Open `result.html` in
-> redline for round N+1 — the proposed correction in section 2 is waiting on you.
+> Round N is written to `<path>`. Open it back in redline for round N+1 — the
+> proposed correction in section 2 is waiting on you.
 
 ---
 
 ## 10. Hard rules
 
-1. Never modify `snapshot.html`, `annotations.json`, `manifest.json`, or
-   `annotated.png`.
+1. Never modify the bundle you were handed — it is the author's turn. Write to
+   the target you chose in §1a, and to nothing else.
 2. Never edit content that no annotation points at.
 3. Never answer a `question` with an edit.
 4. Never let a `fact-check` correction into the document unwrapped.
 5. Never guess at an anchor you could not locate — report it.
 6. Never reformat, re-indent, or re-minify the HTML.
-7. Always write both `result.html` and `changes.md`, with all five sections.
+7. Always write both the edited document — `redline-state` block updated — and
+   `changes.md`, with all five sections.
 8. If you did less than the author asked, say so plainly in changes.md. Silent
    incompleteness is the one failure mode that breaks the loop.
