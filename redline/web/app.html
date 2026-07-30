@@ -201,12 +201,6 @@
   .tag.pend{color:#f0b429; border-color:#5a4413}
   .empty{color:var(--dim); font-size:13px; text-align:center; padding:22px 0}
 
-  pre.prompt{
-    margin:12px 0 0; background:#0d1015; border:1px solid var(--line); border-radius:9px;
-    padding:12px 13px; font:12.5px/1.55 var(--mono); color:#cfe0ff; white-space:pre-wrap; word-break:break-word;
-  }
-  .path{font:14px/1.4 var(--mono); color:#7ee2a8; word-break:break-all}
-
   /* ---------- misc ---------- */
   #toast{
     position:fixed; left:50%; bottom:26px; transform:translateX(-50%) translateY(16px);
@@ -264,7 +258,6 @@
 
   <span class="chip" id="counts">0 marks</span>
   <span class="chip" id="ident">no page</span>
-  <span class="chip" id="pngChip" title="html2canvas (CDN) status">png …</span>
 
   <div class="grp">
     <select class="mini" id="pageWidth" title="render width">
@@ -281,7 +274,9 @@
   <button class="btn ghost" id="clearBtn" title="clear marks in this mode">Clear</button>
   <button class="btn ghost" id="helpBtn" title="shortcuts">?</button>
   <button class="btn ghost" id="openBtn">Open…</button>
+  <button class="btn ghost" id="importBtn" title="merge an agent's returned bundle">Import…</button>
   <button class="btn primary" id="exportBtn">Export round <kbd>⌘E</kbd></button>
+  <input type="file" id="import" accept=".html" hidden>
 </header>
 
 <div id="main">
@@ -332,24 +327,6 @@
   </div>
 </div>
 
-<!-- export result panel -->
-<div class="scrim" id="doneScrim">
-  <div class="modal">
-    <div class="mhead"><h2>Round exported</h2><div class="spacer"></div><button class="btn" id="doneClose">Close</button></div>
-    <div class="mbody">
-      <div class="path" id="donePath"></div>
-      <div class="hint" id="doneMeta" style="margin-top:8px"></div>
-      <div id="doneNotes"></div>
-      <h2 style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);margin:18px 0 0">Your turn is over. Hand it to the agent:</h2>
-      <pre class="prompt" id="donePrompt"></pre>
-      <div style="display:flex;gap:8px;margin-top:12px">
-        <button class="btn ghost" id="copyPrompt">Copy prompt</button>
-        <button class="btn ghost" id="openAfter">Open another page</button>
-      </div>
-    </div>
-  </div>
-</div>
-
 <!-- help -->
 <div class="scrim" id="helpScrim">
   <div class="modal">
@@ -384,9 +361,6 @@
    which is what makes the exported anchors trustworthy against snapshot.html.
    ========================================================================= */
 
-const H2C_URL = "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js";
-const SCHEMA_VERSION = "1.0";
-
 const INTENTS = [
   {id:"instruct",   color:"#3b82f6", hint:"apply this change"},
   {id:"question",   color:"#a855f7", hint:"answer it, do not edit"},
@@ -416,7 +390,6 @@ const S = {
   drag: null,
   textIndex: null,
   hover: null,
-  h2c: null,                // Promise<boolean>
   selected: null,
   docKey: null,             // normalized identity for the mounted document
   round: 0,                 // incremented by downloadBundle(); lineage only
@@ -457,14 +430,6 @@ async function boot(){
   wireModals();
   wireCanvas();
   wireKeys();
-  S.h2c = loadHtml2Canvas();
-  S.h2c.then(ok => {
-    const c = $("#pngChip");
-    c.textContent = ok ? "png ready" : "png offline";
-    c.classList.toggle("warn", !ok);
-    c.title = ok ? "html2canvas loaded — annotated.png will be written"
-                 : "html2canvas (CDN) unavailable — the packet will still be written, without annotated.png";
-  });
 
   const m = location.pathname.match(/^\/view\/([^/]+)$/);
   if (m) {
@@ -473,22 +438,6 @@ async function boot(){
   } else {
     openPanel(true);
   }
-}
-
-function loadHtml2Canvas(){
-  return new Promise(resolve => {
-    if (window.html2canvas) return resolve(true);
-    const s = document.createElement("script");
-    s.src = H2C_URL;
-    s.crossOrigin = "anonymous";
-    s.referrerPolicy = "no-referrer";
-    let settled = false;
-    const done = ok => { if (!settled) { settled = true; resolve(ok && !!window.html2canvas); } };
-    s.onload = () => done(true);
-    s.onerror = () => done(false);
-    document.head.appendChild(s);
-    setTimeout(() => done(false), 9000);
-  });
 }
 
 async function loadSnapshot(id){
@@ -1377,147 +1326,53 @@ async function setPageWidth(w){
 }
 
 /* =========================================================================
-   7. Export
+   7. The round bundle: download and import.
+   The round boundary is entirely client-side — one HTML file carrying the
+   document and an inert state block. No server round-trip, no packet.
    ========================================================================= */
-function buildAnnotations(){
-  return {
-    schema_version: SCHEMA_VERSION,
-    tool: "redline",
-    created_at: new Date().toISOString(),
-    session_id: S.snap ? S.snap.session_id : "",
-    round: S.snap ? S.snap.round : 1,
-    parent_round: S.snap ? (S.snap.parent_round ?? null) : null,
-    source: S.snap ? S.snap.source : null,
-    viewport: {
-      width: S.pageW,
-      height: S.docH,
-      gutter_width: S.gutterW,
-      device_pixel_ratio: window.devicePixelRatio || 1,
-    },
-    draw: S.draw.map(d => ({
-      id: d.id, type: d.type, color: d.color, stroke_width: d.stroke_width,
-      points: d.points, bounds: d.bounds, note: d.note || "",
-      attached_to: d.attached_to || null, created_at: d.created_at,
-    })),
-    highlights: S.highlights.map(h => ({
-      id: h.id, number: h.number, intent: h.intent, comment: h.comment,
-      anchor: h.anchor, rects: h.rects, created_at: h.created_at,
-    })),
+/* Download is the round boundary: it increments the round and retires
+   every draw mark (spec §6.3, §9). */
+async function downloadBundle(){
+  if (!S.doc){ toast("open a page first", true); return; }
+  S.round = (S.round || 0) + 1;
+  // Draw-mark retirement is wired by the draw-history step; a bundle is a
+  // round boundary for highlights either way.
+  if (typeof retireDrawMarks === "function") retireDrawMarks();
+  const html = "<!doctype html>\n" + S.doc.documentElement.outerHTML;
+  const state = {
+    schema_version: "2.0",
+    document_key: S.docKey,
+    round: S.round,
+    viewport: { width: S.pageW, gutter_width: S.gutterW },
+    annotations: S.highlights.filter(h => RedlineCore.isLive(S.states[h.id] || "open")),
+    responses: S.responses,
   };
+  const blob = new Blob([RedlineCore.serializeBundle(html, state)], { type: "text/html" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "redline-" + slug(S.docKey) + "-r" + S.round + ".html";
+  a.click();
+  URL.revokeObjectURL(url);
+  await persist();
+  toast("round " + S.round + " downloaded");
 }
 
-async function flatten(){
-  const ok = await S.h2c;
-  if (!ok || !window.html2canvas) throw new Error("html2canvas unavailable (CDN blocked or offline)");
-  const W = S.pageW, H = S.docH, SW = S.pageW + S.gutterW, SH = S.stageH;
-  const pageCanvas = await window.html2canvas(S.doc.documentElement, {
-    backgroundColor: "#ffffff",
-    width: W, height: H, windowWidth: W, windowHeight: H,
-    scale: 1, scrollX: 0, scrollY: 0,
-    useCORS: true, allowTaint: true, logging: false, imageTimeout: 6000,
-  });
-  const out = document.createElement("canvas");
-  out.width = SW; out.height = SH;
-  const c = out.getContext("2d");
-  c.fillStyle = "#ffffff"; c.fillRect(0, 0, SW, SH);
-  c.drawImage(pageCanvas, 0, 0, W, H);
-  c.fillStyle = "#f4f5f7"; c.fillRect(W, 0, S.gutterW, SH);
-  c.strokeStyle = "#d7dae0"; c.lineWidth = 1;
-  c.beginPath(); c.moveTo(W + 0.5, 0); c.lineTo(W + 0.5, SH); c.stroke();
-  c.drawImage($("#overlay"), 0, 0, SW, SH);
-  drawCardsToCanvas(c);
-  return out.toDataURL("image/png");
-}
+function slug(key){ return String(key).replace(/^[a-z]+:\/*/i, "").replace(/[^a-z0-9]+/gi, "-").slice(0, 40); }
 
-function drawCardsToCanvas(c){
-  for (const h of S.highlights){
-    const card = document.querySelector('.card[data-id="' + h.id + '"]');
-    if (!card) continue;
-    const x = S.pageW + card.offsetLeft, y = card.offsetTop;
-    const w = card.offsetWidth, hh = card.offsetHeight;
-    const color = INTENT_COLOR[h.intent] || INTENT_COLOR.instruct;
-    c.save();
-    c.fillStyle = "#ffffff";
-    roundRect(c, x, y, w, hh, 9); c.fill();
-    c.strokeStyle = "#dfe3e8"; c.lineWidth = 1;
-    roundRect(c, x + 0.5, y + 0.5, w - 1, hh - 1, 9); c.stroke();
-    c.fillStyle = color;
-    roundRect(c, x, y, 4, hh, 2); c.fill();
-    // badge
-    c.beginPath(); c.arc(x + 22, y + 18, 9.5, 0, Math.PI * 2); c.fill();
-    c.fillStyle = "#fff"; c.font = "700 11px ui-monospace, Menlo, monospace";
-    c.textAlign = "center"; c.textBaseline = "middle";
-    c.fillText(String(h.number), x + 22, y + 18.5);
-    c.textAlign = "start"; c.textBaseline = "alphabetic";
-    // intent
-    c.fillStyle = color; c.font = "600 11px ui-monospace, Menlo, monospace";
-    c.fillText(h.intent, x + 38, y + 22);
-    // quoted text — wrapped and clipped exactly like the DOM card's 2 lines
-    c.fillStyle = "#6b7280"; c.font = "11.5px ui-sans-serif, system-ui, sans-serif";
-    const q = "“" + h.anchor.quoted_text.replace(/\s+/g, " ").trim() + "”";
-    const qLines = wrapText(c, q, w - 26).slice(0, 2);
-    if (qLines.length === 2) qLines[1] = fitText(c, qLines[1] + "…", w - 26);
-    qLines.forEach((ln, i) => c.fillText(fitText(c, ln, w - 26), x + 12, y + 44 + i * 16));
-    // comment
-    const textareaTop = 8 + 24 + qLines.length * 16 + 5;
-    c.fillStyle = "#16181d"; c.font = "13px ui-sans-serif, system-ui, sans-serif";
-    const lines = wrapText(c, h.comment || "(no comment)", w - 30);
-    lines.slice(0, 10).forEach((ln, i) =>
-      c.fillText(fitText(c, ln, w - 30), x + 14, y + textareaTop + 19 + i * 18));
-    c.restore();
+/* Merge is by annotation id, so opening a stale bundle can never clobber
+   newer local state (spec §7). */
+async function importBundle(file){
+  const text = await file.text();
+  const parsed = RedlineCore.parseBundle(text);
+  if (!parsed){ toast("no redline block in that file", true); return; }
+  const key = parsed.document_key || S.docKey;
+  await RedlineStore.mergeResponses(key, parsed.responses || {});
+  if (key === S.docKey){
+    S.responses = Object.assign({}, S.responses, parsed.responses || {});
+    recomputeStates(); syncCards(); renderHistory();
   }
-}
-
-async function exportRound(){
-  if (!S.snap){ toast("open a page first", true); return; }
-  const ann = buildAnnotations();
-  if (!ann.draw.length && !ann.highlights.length){ toast("nothing annotated yet", true); return; }
-  const blank = ann.highlights.filter(h => !h.comment.trim());
-  if (blank.length && !confirm(blank.length + " highlight(s) have no comment. Export anyway?")) return;
-
-  const notes = [];
-  let png = "";
-  try {
-    busy(true, "flattening the page…");
-    png = await flatten();
-  } catch (err){
-    notes.push("annotated.png omitted: " + (err && err.message ? err.message : String(err)));
-    console.warn("flatten failed", err);
-  }
-  try {
-    busy(true, "writing the packet…");
-    const r = await fetch("/export/" + encodeURIComponent(S.snap.id), {
-      method: "POST",
-      headers: {"content-type": "application/json"},
-      body: JSON.stringify({annotations: ann, flattened_png_base64: png, notes, viewport: ann.viewport}),
-    });
-    const body = await r.json();
-    if (!r.ok) throw new Error(body.error || ("HTTP " + r.status));
-    showDone(body);
-    S.snap.round = body.round + 1;
-    updateIdent();
-  } catch (err){
-    toast("export failed: " + err.message, true);
-  } finally {
-    busy(false);
-  }
-}
-
-function showDone(body){
-  $("#donePath").textContent = body.path + "/";
-  $("#doneMeta").textContent =
-    "session " + body.session_id + " · round " + body.round + " · " +
-    body.files.join(", ") + " · " +
-    body.counts.highlights + " highlight(s), " + body.counts.draw + " draw mark(s)";
-  const notes = (body.notes || []).filter(Boolean);
-  $("#doneNotes").innerHTML = notes.length
-    ? '<div class="hint" style="color:#f0b429;margin-top:8px">' + notes.map(n => "· " + esc(n)).join("<br>") + "</div>"
-    : "";
-  $("#donePrompt").textContent =
-    "Process the newest round in ./inbox using the redline skill. Apply the\n" +
-    "annotations, reply to questions, verify at both widths, and give me the\n" +
-    "change summary.";
-  $("#doneScrim").classList.add("open");
+  toast("merged " + Object.keys(parsed.responses || {}).length + " response(s)");
 }
 
 /* =========================================================================
@@ -1633,7 +1488,15 @@ function wireToolbar(){
   $("#zoomFit").addEventListener("click", () => { fitZoom(); applyStageSize(); });
   $("#undoBtn").addEventListener("click", undo);
   $("#clearBtn").addEventListener("click", clearMarks);
-  $("#exportBtn").addEventListener("click", exportRound);
+  $("#exportBtn").addEventListener("click", downloadBundle);
+  $("#importBtn").addEventListener("click", () => $("#import").click());
+  $("#import").onchange = e => { if (e.target.files[0]) importBundle(e.target.files[0]); };
+  // A returned bundle can also simply be dropped anywhere on the window.
+  document.addEventListener("dragover", e => e.preventDefault());
+  document.addEventListener("drop", e => {
+    e.preventDefault();
+    if (e.dataTransfer.files[0]) importBundle(e.dataTransfer.files[0]);
+  });
   $("#openBtn").addEventListener("click", () => openPanel(false));
   $("#helpBtn").addEventListener("click", () => $("#helpScrim").classList.add("open"));
   // Opening or closing a drawer changes the gutter's height; the stage follows.
@@ -1693,13 +1556,7 @@ function wireModals(){
     e.stopPropagation();
   });
   $("#sampleBtn").addEventListener("click", () => openPath("sample:article"));
-  $("#doneClose").addEventListener("click", () => $("#doneScrim").classList.remove("open"));
-  $("#openAfter").addEventListener("click", () => { $("#doneScrim").classList.remove("open"); openPanel(false); });
   $("#helpClose").addEventListener("click", () => $("#helpScrim").classList.remove("open"));
-  $("#copyPrompt").addEventListener("click", async () => {
-    try { await navigator.clipboard.writeText($("#donePrompt").textContent); toast("prompt copied"); }
-    catch(_){ toast("copy failed — select it by hand", true); }
-  });
   $$(".scrim").forEach(s => s.addEventListener("mousedown", e => {
     if (e.target === s && !(s.id === "openScrim" && !S.snap)) s.classList.remove("open");
   }));
@@ -1711,7 +1568,7 @@ function wireKeys(){
     const typing = t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT" || t.isContentEditable);
     const meta = e.metaKey || e.ctrlKey;
     if (meta && e.key.toLowerCase() === "z"){ e.preventDefault(); undo(); return; }
-    if (meta && e.key.toLowerCase() === "e"){ e.preventDefault(); exportRound(); return; }
+    if (meta && e.key.toLowerCase() === "e"){ e.preventDefault(); downloadBundle(); return; }
     if (e.key === "Escape"){
       $$(".scrim.open").forEach(s => { if (!(s.id === "openScrim" && !S.snap)) s.classList.remove("open"); });
       $("#noteBox").classList.remove("open");
@@ -1745,7 +1602,7 @@ function wireKeys(){
    ========================================================================= */
 window.__redline = {
   S,
-  setMode, setTool, exportRound, buildAnnotations, resolveAnchor, makeAnchor,
+  setMode, setTool, downloadBundle, importBundle, resolveAnchor, makeAnchor,
   rectsForRange, buildTextIndex, refresh,
   // Select a text range in the snapshot exactly as a mouse drag would, then
   // let the normal selection handler turn it into a highlight.
