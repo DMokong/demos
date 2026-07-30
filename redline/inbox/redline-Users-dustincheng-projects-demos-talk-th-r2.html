@@ -1,0 +1,153 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><style>
+  :root { color-scheme: light dark; }
+  body {
+    max-width: 42rem;
+    margin: 0 auto;
+    padding: 3rem 1.25rem 5rem;
+    font: 16px/1.65 Georgia, "Iowan Old Style", serif;
+  }
+  h1 { font-size: 1.9rem; line-height: 1.2; margin: 0 0 0.5rem; }
+  h2 { font-size: 1.15rem; margin: 2.4rem 0 0.6rem; letter-spacing: 0.01em; }
+  p { margin: 0 0 1.05rem; }
+  .byline {
+    font: italic 0.9rem/1.5 Georgia, serif;
+    opacity: 0.7;
+    margin-bottom: 2rem;
+  }
+  blockquote {
+    margin: 1.5rem 0;
+    padding: 0.2rem 0 0.2rem 1.1rem;
+    border-left: 3px solid currentColor;
+    font-style: italic;
+    opacity: 0.9;
+  }
+  ul { margin: 0 0 1.05rem; padding-left: 1.3rem; }
+  li { margin-bottom: 0.45rem; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1.5rem 0;
+    font: 0.87rem/1.45 -apple-system, system-ui, sans-serif;
+  }
+  th, td {
+    text-align: left;
+    vertical-align: top;
+    padding: 0.55rem 0.6rem;
+    border-bottom: 1px solid rgba(128,128,128,0.35);
+  }
+  th { font-weight: 600; border-bottom-width: 2px; }
+  footer {
+    margin-top: 3rem;
+    padding-top: 1.2rem;
+    border-top: 1px solid rgba(128,128,128,0.4);
+    font: 0.85rem/1.55 -apple-system, system-ui, sans-serif;
+    opacity: 0.85;
+  }
+  footer h2 { font-size: 0.95rem; margin-top: 0; }
+</style>
+
+</head><body><h1>The Opus 5 Claims That Survived Are the Ones Nobody Could Check</h1>
+
+<p class="byline">drafted by a research workflow — 2026-07-31</p>
+
+<p>Run the Claude Opus 5 launch through a verification filter one week out and the claims sort cleanly into two piles. What nobody disputes: the ship date, July 24, and the price, $5 per million input tokens and $25 per million output. What falls apart under contact: nearly every performance claim in the announcement. The obvious reading is that Anthropic was honest about the boring facts and promotional about the exciting ones. That reading is lazy, and the sweep supports a sharper one.</p>
+
+<p>The claims that survived are not the true ones. They are the <em>administrative</em> ones — facts constituted by an organization's own act rather than discovered by measurement. A price is a number Anthropic decides; a launch date is an event Anthropic schedules. There is no experiment that could falsify either. What looks like corroboration is propagation: OpenRouter and Requesty publish $5/$25 because they resell at $5/$25, and AWS and Microsoft each posted "available today" on calendars synced with Anthropic's under embargo. Those parties carry real commercial exposure, which makes them reliable relays. None of them ran a test.</p>
+
+<blockquote>All corroboration here is independent adoption of the same vendor-set number, not independent re-measurement. The strongest evidence in the entire sweep is evidence that a decision was implemented, not that a claim is correct.</blockquote>
+
+<h2>The sorting variable is infrastructure, not honesty</h2>
+
+<p>What determined survival was whether an apparatus existed for someone outside the launch to run the test. Sort the failures by that axis, not by subject.</p>
+
+<ul>
+  <li><strong>Fast mode — 2x price, 2.5x speed.</strong> The price half is confirmed in production ($10/$50 on OpenRouter). The speed half has never been measured by anyone but Anthropic. Artificial Analysis, the one org that actually benchmarks throughput, clocked base Opus 5 at 53.8 tokens/sec and has <em>no Fast-mode entry at all</em>. Not a contradiction — a hole where a test should be.</li>
+  <li><strong>Frontier-Bench v0.1.</strong> The benchmark's own maintainers, who are independent of Anthropic, have not published the dataset or the code. Nobody can reproduce the 43.3% even in principle. Their leaderboard marks it self-reported.</li>
+  <li><strong>CursorBench 3.2.</strong> Cursor is a different company from Anthropic, and its numbers (70.0% at $8.23/task vs Fable 5's 70.5% at $17.32) do check out arithmetically. But Cursor builds, runs, grades, and publishes it alone, with no public test set — one measurement event surfaced through a dozen channels.</li>
+</ul>
+
+<p>Now the exception, which is the point. ARC-AGI-3 is the only claim here whose benchmark has an independent administrator running its own evaluations on a published harness. It is also the only one that produced a live, adversarial dispute: on July 30, OpenAI reported GPT-5.6 Sol at 38.3% using two general API settings, above Opus 5's 30.2%, with ARC Prize's co-founder confirming those settings are legitimate but off-leaderboard for parity. That figure is self-reported and unreplicated by ARC Prize on a private set — one company's claim about its own model, and it should be read as such. But it exists, and it was answerable. That is the tell.</p>
+
+<h2>Read silence as a warning, not a clearance</h2>
+
+<p>The claims nobody argued with are the claims nobody was equipped to argue with. Contradiction is a marker of instrumentation. A vendor number that draws fire is better-evidenced than one that draws applause, because drawing fire proves someone had standing to shoot.</p>
+
+<table>
+  <tbody><tr><th>Claim</th><th>Who could run the test</th><th>What happened</th></tr>
+  <tr><td>July 24 date</td><td>Nobody — it is an event, not a result</td><td>Corroborated by relays</td></tr>
+  <tr><td>$5 / $25 pricing</td><td>Nobody — Anthropic sets it</td><td>Corroborated by resellers</td></tr>
+  <tr><td>Fast mode 2.5x</td><td>Artificial Analysis, in principle</td><td>Never measured; silence</td></tr>
+  <tr><td>Frontier-Bench 43.3%</td><td>Nobody yet — code unpublished</td><td>Epoch AI's independent index disagrees</td></tr>
+  <tr><td>CursorBench parity</td><td>Cursor only</td><td>Unreproducible, uncontested</td></tr>
+  <tr><td>ARC-AGI-3 lead</td><td>ARC Prize, on a real harness</td><td>Disputed within six days</td></tr>
+</tbody></table>
+
+<p>A coda makes the price finding worse. Two outlets — a Substack post and tech-ish.com — report Opus 5 burning <mark data-redline="proposed" title="proposed correction: the '2x vs Opus 4.8' figure is single-source and never independently measured. The one independent measurement is CodeRabbit's code-review bench - ~9,500 output tokens/call vs ~5,800 baseline, i.e. +65%, not 2x - and against their frontier baseline, not Opus 4.8 specifically. Separately, Anthropic's own prompting guide says Opus 5 verifies unprompted and that carried-over verification instructions cause over-verification, so part of any observed increase is a migration artifact rather than model behaviour.">roughly 65% more output tokens per call than a frontier baseline</mark>. To be exact: that is a single-source claim and I would not build a budget on it. But note the asymmetry. The most-corroborated number in this sweep is a sticker price, while the thing a buyer needs — what a task costs — is that price times a token-consumption figure nobody independent has measured. The rate is flat and verified. The bill is unstudied.</p>
+
+<p>A reader following this day to day saw a launch confirmed from every direction. What they were seeing was one organization's announcements arriving through six mailboxes, plus exactly one benchmark with enough public infrastructure to start a fight. The fight is the good news.</p>
+
+<footer>
+  <h2>Sources used</h2>
+  <ul>
+    <li>AWS "What's New" post and ML blog, 2026-07-24; Bedrock model card for anthropic.claude-opus-5</li>
+    <li>Microsoft Foundry (Azure AI) blog, "Claude Opus 5 is available today"</li>
+    <li>Artificial Analysis — Opus 5 article and model page (53.8 tok/s; no Fast-mode variant)</li>
+    <li>OpenRouter listings for claude-opus-5 and -fast; Requesty.ai Bedrock listing (updated 2026-07-30)</li>
+    <li>anthropic.com/news/claude-opus-5; code.claude.com and platform.claude.com Fast-mode docs</li>
+    <li>ARC Prize Foundation results pages for Claude Opus 5 and GPT-5.6 Sol</li>
+    <li>OpenAI, "How two settings tripled our ARC-AGI-3 scores," 2026-07-30</li>
+    <li>Epoch AI Capabilities Index / SWE-ECI</li>
+    <li>frontierbench.ai / github.com/harbor-framework/frontier-bench (dataset and code unpublished); llm-stats.com; aireleasetracker.com</li>
+    <li>cursor.com/evals and @cursor_ai; BenchLM.ai and digitalapplied.com critiques</li>
+    <li>productwithshambhavi.substack.com and tech-ish.com on token consumption (single source, flagged above)</li>
+    <li>explainx.ai models-page tracking (weak provenance; not counted)</li>
+  </ul>
+</footer>
+<script type="application/redline+json" id="redline-state">
+{
+  "schema_version": "2.0",
+  "document_key": "file:///Users/dustincheng/projects/demos/talk/thread.html",
+  "round": 2,
+  "viewport": {
+    "width": 860,
+    "gutter_width": 320
+  },
+  "annotations": [
+    {
+      "id": "h1",
+      "number": 1,
+      "intent": "fact-check",
+      "comment": "The Anthropic site calls out that previous generation model's context and instructions and skills are not compatible or efficient with the latest SOTA. They recommend deleting and starting fresh when using Opus 5 due to the built in verification and judgement capabilities which means any additional instructions will instead be asking it to duplicate the work.",
+      "anchor": {
+        "selector": "body > p:nth-of-type(7)",
+        "container_tag": "p",
+        "container_text_length": 527,
+        "start_offset": 94,
+        "end_offset": 173,
+        "quoted_text": "Opus 5 burning roughly twice the output tokens of Opus 4.8 on comparable tasks.",
+        "prefix": " post and tech-ish.com \u2014 report ",
+        "suffix": " To be exact: that is a single-s",
+        "document_start_offset": 4100,
+        "document_end_offset": 4179
+      },
+      "rects": [
+        {
+          "x": 142,
+          "y": 1906,
+          "w": 576,
+          "h": 18
+        }
+      ],
+      "created_at": "2026-07-30T17:55:21.550Z"
+    }
+  ],
+  "responses": {
+    "h1": {
+      "kind": "applied",
+      "summary": "Corrected the token figure. '2x vs Opus 4.8' is single-source; CodeRabbit's independent measurement is +65% vs their frontier baseline. The migration-artifact point is confirmed by Anthropic's own prompting guide."
+    }
+  }
+}
+</script>
+</body></html>
