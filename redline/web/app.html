@@ -123,6 +123,40 @@
     border-left:2px solid #e3e6eb; max-height:32px; overflow:hidden;
   }
 
+  /* ---------- annotation state, and the agent's turn ----------
+     The reply must not read as more of the author's own comment: it is the
+     other party speaking. Hence the tinted well, the label, and a left rule
+     in the state's own colour. This is the moment the loop becomes visible. */
+  .card .cstate{
+    display:inline-flex; align-items:center; gap:5px; align-self:flex-start;
+    font:10.5px/1 var(--mono); letter-spacing:.06em; text-transform:uppercase;
+    border-radius:999px; padding:3px 8px; margin:0 0 6px; white-space:nowrap;
+    border:1px solid transparent;
+  }
+  .card .cstate::before{content:""; width:5px; height:5px; border-radius:50%; background:currentColor}
+  .cstate.s-open              {color:#6b7280; background:#f1f2f4; border-color:#e3e6eb}
+  .cstate.s-answered          {color:#1d6f42; background:#e8f5ed; border-color:#bfe0cd}
+  .cstate.s-applied-unverified{color:#8a5a00; background:#fdf3e2; border-color:#f0dcb4}
+  .cstate.s-needs-reanchor    {color:#a8423a; background:#fdecea; border-color:#f2c9c5}
+
+  .card .reply{
+    margin:6px 0 0; padding:7px 9px; border-radius:6px;
+    background:#f4f8f5; border:1px solid #d9e8de; border-left:3px solid #1d6f42;
+    font:12.5px/1.45 var(--ui); color:#1f2937; white-space:pre-wrap;
+  }
+  .card .reply::before{
+    content:"agent"; display:block; font:10px/1 var(--mono); letter-spacing:.08em;
+    text-transform:uppercase; color:#1d6f42; margin-bottom:4px;
+  }
+  .card .reply.applied{background:#fdf8ef; border-color:#f0dcb4; border-left-color:#8a5a00}
+  .card .reply.applied::before{content:"agent · applied"; color:#8a5a00}
+
+  .card .dismiss{
+    border:0; background:transparent; color:#98a0ad; font:11px/1 var(--ui);
+    padding:4px 2px 0; cursor:pointer; align-self:flex-start;
+  }
+  .card .dismiss:hover{color:#16181d; text-decoration:underline}
+
   /* ---------- state chips, agent replies, and the gutter footer ---------- */
   .card .chip{
     display:inline-block; font:10.5px/1 var(--mono); letter-spacing:.04em;
@@ -506,7 +540,26 @@ async function afterMount(){
     // Merge by id so a stale bundle can never clobber newer local state.
     const byId = new Map(S.highlights.map(h => [h.id, h]));
     for (const a of (embedded.annotations || [])) if (!byId.has(a.id)) S.highlights.push(a);
-    S.responses = Object.assign({}, S.responses, embedded.responses || {});
+
+    // Ids are a per-document counter ("h" + ++S.hseq), NOT globally unique, so
+    // two annotation sets for the same page both contain h1, h2, h3. Merging
+    // responses on id alone silently staples the agent's answers onto whichever
+    // annotation happens to hold that number. Require the anchor text to match
+    // as well: same id AND same quoted_text is the same annotation.
+    const bundleById = new Map((embedded.annotations || []).map(a => [a.id, a]));
+    const accepted = {}, rejected = [];
+    for (const [id, resp] of Object.entries(embedded.responses || {})){
+      const mine = byId.get(id), theirs = bundleById.get(id);
+      const sameAnchor = mine && theirs &&
+        mine.anchor && theirs.anchor &&
+        mine.anchor.quoted_text === theirs.anchor.quoted_text;
+      if (!mine || sameAnchor) accepted[id] = resp;
+      else rejected.push(id);
+    }
+    if (rejected.length){
+      toast(rejected.length + " response(s) ignored — different annotation with the same id", true);
+    }
+    S.responses = Object.assign({}, S.responses, accepted);
     await RedlineStore.saveDoc(S.docKey, {
       round: S.round, annotations: S.highlights, responses: S.responses,
       dismissed: S.dismissed, draw_history: S.drawHistory,
@@ -831,9 +884,11 @@ function paintCard(card, h){
   if (ta.value !== h.comment) ta.value = h.comment;
   autosize(ta);
 
+  // .cstate, not .chip — .chip is the toolbar pill and styling them alike
+  // dropped a toolbar-shaped element into the middle of a card.
   const state = S.states[h.id] || "open";
-  const chip = card.querySelector(".chip") || card.appendChild(document.createElement("div"));
-  chip.className = "chip chip-" + state;
+  const chip = card.querySelector(".cstate") || card.appendChild(document.createElement("div"));
+  chip.className = "cstate s-" + state;
   chip.textContent = ({
     "open": "open", "answered": "answered",
     "applied-unverified": "applied · verify", "needs-reanchor": "needs re-anchoring",
@@ -845,8 +900,11 @@ function paintCard(card, h){
     // A reply that arrives after the card exists still belongs under the
     // chip, above the dismiss button — insertBefore(…, null) appends.
     if (!reply) reply = card.insertBefore(document.createElement("div"), card.querySelector(".dismiss"));
-    reply.className = "reply";
+    reply.className = "reply" + (resp.kind === "applied" ? " applied" : "");
     reply.textContent = resp.text || resp.summary || "";
+  } else {
+    const stale = card.querySelector(".reply");
+    if (stale) stale.remove();   // a dismissed/undone response must not linger
   }
 
   const dis = card.querySelector(".dismiss") || card.appendChild(document.createElement("button"));
@@ -961,7 +1019,16 @@ function setHover(id){
   render();
 }
 
-function autosize(ta){
+function autosize(ta, tries){
+  // Measuring before the gutter reaches its final width makes every word wrap
+  // onto its own line, so scrollHeight comes back enormous — and it sticks,
+  // because nothing re-measures afterwards. A real card is ~272px wide, so
+  // anything much narrower means layout has not settled. Bounded retry: never
+  // spin forever if a card genuinely is narrow.
+  if (ta.offsetWidth < 80 && (tries | 0) < 30){
+    requestAnimationFrame(() => autosize(ta, (tries | 0) + 1));
+    return;
+  }
   ta.style.height = "auto";
   ta.style.height = Math.max(34, ta.scrollHeight) + "px";
 }
