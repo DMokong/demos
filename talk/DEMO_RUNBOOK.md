@@ -93,7 +93,22 @@ invisible to this repo.
 ### 1.5 Pre-warm: run all three acts once, screenshot every stage — **TONIGHT (25 min)**
 
 Nothing in this repo can substitute for this: Acts 1–3 need a live Claude Code
-session on your account. Exact steps in §2. As you go, capture:
+session on your account. Exact steps in §2.
+
+**Before you touch anything else, per the outline's revised pre-flight (§7):**
+
+- **Clear stale redline state.** Your browser likely holds annotations under
+  `sample:sample/article.html` from earlier testing, and imported responses can
+  be *refused* by the id-collision guard. In the browser console:
+  `await RedlineStore.saveDoc("sample:sample/article.html", {round:0, annotations:[], responses:{}, dismissed:{}, draw_history:[]})`
+- **Hard-reload redline.** The Go server sends no cache headers; `app.html`
+  caches aggressively and you can end up rehearsing (or demoing) yesterday's
+  frontend.
+- **Annotate with a real question, not a placeholder**, when you run Act 1 below.
+  A placeholder comment produces an empty round — the skill correctly refuses to
+  invent replies, and you see nothing come back.
+
+As you go, capture:
 
 1. redline with the sample article open, before annotating.
 2. Mid-annotation: highlight + comment card visible, arrow drawn.
@@ -118,7 +133,9 @@ LANES table with no API call and no credentials. The script now supports
 discoverable, else it prints setup instructions for **both** options and exits
 nonzero — never fabricated numbers. `anthropic` 0.120.2 + `boto3` are importable
 here (`boto3` is a presenter-machine prerequisite for the Bedrock path only —
-`pip install boto3` if it's missing).
+`pip install boto3` if it's missing). **Gate for Act 0: `pip install anthropic`
+first** — the import is top-level, so it also gates the `route` subcommand, which
+needs no API key or credentials at all.
 
 What has **never run**: a live sweep. This sandbox has no API key and no working
 Bedrock credentials (the ambient `AWS_ACCESS_KEY_ID` here is a sandbox
@@ -343,7 +360,67 @@ judgment lives in the policy; a router runs on every request so it must cost les
 than the cheapest lane it routes to; bias to escalate — misrouting up costs
 cents, misrouting down costs quality.
 
-### Act 3 — Dynamic Workflow (the batch)
+### Act 3 — Dynamic Workflow (the research fan-out) — **REWRITTEN 2026-07-31**
+
+Replaces the old redline-bundle-batch version. Real research the room can judge,
+re-runs without spoiling, and — critically — has **zero dependency on redline**,
+which changed the night before the talk. The bundle batch is now the fallback,
+below.
+
+**⏱ Timing — decide before you walk on.** The run takes ~11.5 minutes, which does
+not fit inside Act 3's slot. **Kick it off at the very start of Act 1** — before
+you invite the volunteer up — so it runs underneath Acts 1 and 2, and return to it
+here for the payoff. Or skip the live run and show tonight's pre-run output
+instead. **Do not stand and watch it run.**
+
+**The prompt** (verbatim from the outline §7 — this exact wording was run and
+works):
+
+> Create a workflow to research the Opus 5 release. Fan out one agent per source
+> across Hacker News, the Anthropic newsroom, two other frontier labs' blogs, and
+> two benchmark trackers. Then cross-check every factual claim against at least
+> two independent sources, discarding anything only one source carries. Then a
+> final agent finds the through-line those sources don't state outright and
+> writes it as a standalone HTML article to `talk/thread.html`. **Route each
+> phase to the cheapest model that can do it.**
+
+**Measured run (2026-07-31):** 13 agents · 0 errors · **11m34s** · 6 sources, all
+reachable · 102 raw claims · 6 cross-checked · **2 corroborated, 4 dropped**.
+
+Deterministic guard, say it on stage — unchanged, still true: **a pixel diff can
+tell you the page changed; it can't read an arrow.** Judgment per item — if a tool
+could decide it, you'd use the tool.
+
+While it spins up (or while narrating the pre-run): open `/config` →
+**"Dynamic workflow size"**, mention subagent nesting depth 3.
+
+**Payoff 1 — the routing, now visible in the code, not asserted over a slide.**
+Open the generated JS orchestration script: `model: 'haiku'` sits on the six
+parallel fetchers, `model: 'sonnet'` on the cross-checkers, one `model: 'opus'` on
+the synthesis.
+
+> "In Act 2 the routing was our policy. Here, Opus 5 wrote the routing itself —
+> per task. Fan-out zone does the sweep; judgment zone finds the thread. That's
+> the whole map, in one script."
+
+**Payoff 2 — the result argues with the talk.** Open `talk/thread.html`: only the
+price and the ship date survived independent cross-checking, and three claims
+from these slides did not (outline §3a).
+
+**Close the loop into Act 1:** open `talk/thread.html` in redline. The workflow
+just wrote a draft; now annotate it. **Meta-punchline: the demo was the feedback
+loop your team wishes it had — and the thing being reviewed was written by the
+previous act.**
+
+⚠️ **Network-dependent, unlike redline.** Wifi dies → Act 3 dies. Fallback:
+tonight's pre-run `talk/thread.html` plus the counts above, narrated.
+
+#### Fallback — offline or no Dynamic Workflows access: the redline bundle batch
+
+Use this if wifi is down (this path touches only local files, no external
+fetches) or if `/config` showed no "Dynamic workflow size" option in pre-flight
+(§1.4) — in that second case there is no workflow runtime at all, so also see
+§3.1's further, workflow-free fallback.
 
 **Three bundles are already staged in `redline/bundles`.** Fire demo prompt 3 —
 verbatim from `redline/README.md`:
@@ -352,12 +429,7 @@ verbatim from `redline/README.md`:
 > file following the redline skill end-to-end, then a final agent that
 > cross-checks the results for consistency and compiles a single summary.
 
-*(The talk outline's phrasing is "every packet in ./inbox: one agent per packet".
-Use the README wording above — it matches what is actually staged. One bundle is
-one unit of work, so "one agent per file" is now literally true; there are no
-directories to disambiguate and nothing pending to filter for.)*
-
-Deterministic guard, say it on stage: **a pixel diff can tell you the page
+Deterministic guard for this path too: **a pixel diff can tell you the page
 changed; it can't read an arrow.** Interpreting redlines is design judgment per
 annotation — if a tool could decide it, you'd use the tool.
 
@@ -374,6 +446,9 @@ a cross-checking judge at the end, results aggregating in variables.
 Then close the loop: Act 1's change summary is done — show the designer their
 scribble, applied and verified. **Meta-punchline: the demo was the feedback loop
 your team wishes it had.**
+
+§2.4 below has the full bundle map (which session, which document, which
+annotations) for this fallback path.
 
 ### 2.4 What is staged where — bundle map
 
@@ -672,10 +747,16 @@ Act 1 →  "Process the redline bundle at <path> — apply the annotations, repl
 Act 2 →  "Before changing anything, survey the document inside
           ./bundles/redline-article-r1.html — layout, styling system, and the
           author's tone — conclusions only."
-Act 3 →  "Create a workflow to process every redline bundle in ./bundles: one
-          agent per file following the redline skill end-to-end, then a final
-          agent that cross-checks the results for consistency and compiles a
-          single summary."
+Act 3 →  "Create a workflow to research the Opus 5 release. Fan out one agent per
+          source across Hacker News, the Anthropic newsroom, two other frontier
+          labs' blogs, and two benchmark trackers. Then cross-check every factual
+          claim against at least two independent sources, discarding anything
+          only one source carries. Then a final agent finds the through-line
+          those sources don't state outright and writes it as a standalone HTML
+          article to talk/thread.html. Route each phase to the cheapest model
+          that can do it."
+          ~11.5 min — kick off at the START of Act 1, don't stand and watch it.
+          Offline or no Dynamic Workflows access → bundle-batch fallback, see Act 3.
 
 Staged:  ./bundles/redline-article-r1.html  r1 · 3 highlights (article, session C)
          ./bundles/redline-article-r2.html  r2 · 2 highlights (r1's own output)

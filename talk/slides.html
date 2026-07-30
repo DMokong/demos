@@ -539,6 +539,10 @@ body.ov #ovhint{display:block;}
       <li>"Verifies itself, unprompted" is the fact that makes slide 10's delete list possible. Plant it here, collect it there.</li>
       <li>Benchmark detail if pressed: &gt;2× Opus 4.8's Frontier-Bench at lower cost per task; CursorBench 3.2 70.1 vs Fable's 70.4.</li>
       <li>Fast mode caveat: 2× price means it is an interactive-latency tool, not a throughput tool.</li>
+      <li><b>Verification caveats (outline §3) — say "Anthropic-reported" out loud for these:</b> Frontier-Bench 43.3 is Anthropic-self-reported and unreproducible — no published dataset or code, and Epoch AI (independent) has Opus at 159 vs Fable at 161, tied on the SWE sub-index.</li>
+      <li>CursorBench is a single-channel measurement: Cursor builds, runs, and grades it — no public test set.</li>
+      <li>Fast mode's 2.5× speed is unmeasured by anyone independent — the $10/$50 price is verified live, the speed is not.</li>
+      <li><b>Q&amp;A LANDMINE:</b> OpenAI published 2026-07-30 "How two settings tripled our ARC-AGI-3 scores" — GPT-5.6 Sol 38.3% vs Opus 5's 30.2% on the public set. ARC Prize confirmed the settings are legitimate but off-leaderboard. It's OpenAI self-reported and unreplicated on the private set — say so — but get there first if you assert unqualified benchmark dominance.</li>
     </ul>
   </aside>
 </section></div>
@@ -746,6 +750,7 @@ body.ov #ovhint{display:block;}
       <li>Academic backing for the closing stat: Pareto-frontier price-performance is improving roughly 5–10× per year. Good place to say the map has a shelf life measured in months.</li>
       <li>If challenged on rigor: cross-lab comparisons normalize by token spend, not parameter names; several headline numbers are vendor-reported. Say it before someone else does.</li>
       <li>Grounding number if useful: 9 of the 13 models on AA's intelligence-price frontier are open-weights — the fan-out zone is contested territory.</li>
+      <li><b>Tie to §3a, if time allows:</b> this talk's own Act 3 workflow cross-checked six launch claims from these slides — only the price and the ship date survived. <i>Contradiction is a marker of instrumentation — read silence as a warning, not a clearance.</i></li>
     </ul>
   </aside>
 </section></div>
@@ -979,6 +984,7 @@ body.ov #ovhint{display:block;}
       <li><b>Act 0 line:</b> "That's THE MAP as an API parameter. Everything else today is about deciding who gets which setting."</li>
       <li><b>Act 1:</b> invite the volunteer early. Highlight + "tighten this" (instruct), highlight the dubious claim + fact-check, highlight a sentence + a <i>question</i>, one arrow moving a section up. Export → a bundle lands in <b>downloads</b> (no more ./inbox). Then: <i>"Process the redline bundle at &lt;path&gt; — apply the annotations, reply to questions, verify at both widths, and give me the change summary."</i> Kick it off and talk over it (Act 2).</li>
       <li><b>What to point at on return:</b> the question got a reply, not an edit · the fact-check correction is marked <i>proposed</i>, awaiting the author · unannotated paragraphs untouched · the two-width verification note. Then drag the returned file back onto redline: the reply appears <b>in the annotation's own card</b> under a green ANSWERED chip, and the applied one retires to history as <i>done</i>. <i>"And now it's my turn again."</i> The loop is the product.</li>
+      <li><b>Act 3 prompt (verbatim, outline §7):</b> <i>"Create a workflow to research the Opus 5 release. Fan out one agent per source across Hacker News, the Anthropic newsroom, two other frontier labs' blogs, and two benchmark trackers. Then cross-check every factual claim against at least two independent sources, discarding anything only one source carries. Then a final agent finds the through-line those sources don't state outright and writes it as a standalone HTML article to <code>talk/thread.html</code>. <b>Route each phase to the cheapest model that can do it.</b>"</i> Measured run (2026-07-31): <b>13 agents · 0 errors · 11m34s</b> · 102 raw claims · 6 cross-checked · 2 corroborated, 4 dropped.</li>
       <li><b>Act 3 timing — decide before you walk on:</b> the research workflow runs <b>~11.5 min</b>. Kick it off at the <i>start</i> of Act 1 and return to it, or show the pre-run. Do not stand and watch it.</li>
       <li><b>Act 3 second payoff:</b> open <code>talk/thread.html</code> — of six launch claims, only the price and the ship date survived independent checking. <b>Three claims on these slides did not.</b> The line: <i>contradiction is a marker of instrumentation — read silence as a warning, not a clearance.</i></li>
       <li><b>Act 3 deterministic guard, say it out loud:</b> a pixel diff can tell you the page changed; it can't read an arrow. If a tool could decide it, you'd use the tool.</li>

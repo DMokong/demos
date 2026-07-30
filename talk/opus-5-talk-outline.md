@@ -96,7 +96,7 @@
   - The fix is a **prompt** clause, not a setting: *"route each phase to the cheapest model that can do it."* Which is the better demo anyway — you state the principle, Opus makes the assignments, and you read them off the generated script.
 
 ### Two stories that sell it
-- The Bun creator ported ~1M lines of Zig to Rust in 6 days — file by file, with the existing test suite expected to pass at the end. A task previously scoped in quarters.
+- The Bun creator ported 535,496 lines across 1,448 files from Zig to Rust in 11 days (May 3–14, 2026) — up to 64 parallel Claude instances, with steering and adversarial review, and the existing test suite expected to pass at the end. A task previously scoped in quarters.
 - Community demo: someone sent Opus 5 to build an F1 showroom in Blender — it drafted the car, then unexpectedly fired off workflows with **27 agents, one per part**, each building a high-detail piece. Nobody asked it to; the decomposition instinct is in the model.
 - 🎤 *Pocket note (tabled topic, keep for Q&A if someone asks "isn't this just LangGraph?"):* there's a live "loops vs graphs" debate on X this month — one-liner answer: a loop is one node, a graph is several; Dynamic Workflows' twist is that the model writes the graph per task instead of a developer maintaining it. Multi-agent caution stats if pressed: ~15× token cost vs single chat (Anthropic eng), 14 catalogued failure modes (UC Berkeley).
 
