@@ -10,5 +10,5 @@ import "embed"
 // Assets holds the frontend (web/app.html plus its scripts) and
 // sample/article.html (the bundled demo draft).
 //
-//go:embed web/app.html web/redline-core.js sample/article.html
+//go:embed web/app.html web/redline-core.js web/redline-store.js sample/article.html
 var Assets embed.FS
