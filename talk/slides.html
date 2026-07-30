@@ -149,7 +149,12 @@ tr:last-child td{border-bottom:0;}
 td .nm{color:var(--ink); font-weight:600; display:block;}
 td.mono{font-family:var(--mono); font-size:18px; color:var(--coral); white-space:nowrap;}
 
-/* verdict table — slide 17 (the verification pass) */
+/* routine table — slide 15 (steal these); dense, one line per row */
+#steal-tbl td{padding:10px 20px 10px 0; font-size:20px; line-height:1.42;}
+#steal-tbl td.mono{font-size:17.5px;}
+#s-steal .tag{font-size:15.5px;}
+
+/* verdict table — slide 18 (the verification pass) */
 #s-verify td{padding:14px 20px 14px 0; font-size:20px; line-height:1.42;}
 #s-verify td .nm{font-size:21px; margin-bottom:2px;}
 #s-verify td.vd{padding-right:0;}
@@ -405,7 +410,7 @@ body.ov #ovhint{display:block;}
     <b>Speaker notes · open</b>
     <ul>
       <li>Set the frame in one line: this release is about the <i>economics of daily use</i> — near-frontier intelligence you can afford to run all day.</li>
-      <li>Deck mechanics for me: <i>N</i> toggles these notes, <i>O</i> is the slide grid, <i>F</i> fullscreen. Slide 7 (the map) and slide 15 (demo hub) are the two slides I stay on longest.</li>
+      <li>Deck mechanics for me: <i>N</i> toggles these notes, <i>O</i> is the slide grid, <i>F</i> fullscreen. Slide 7 (the map) and slide 16 (demo hub) are the two slides I stay on longest.</li>
       <li>Timing: hook 2 · lineup 2 · what changed 3 · map 3 · checklist 3 · workflows 5 · demo 8 · quick hits 2 · close 2.</li>
     </ul>
   </aside>
@@ -873,7 +878,7 @@ body.ov #ovhint{display:block;}
     <b>Speaker notes · the trial period</b>
     <ul>
       <li><b>The two experiments he handed the room.</b> <code>claude --system-prompt "your minimal prompt"</code> replaces the whole system prompt. <code>CLAUDE_CODE_SIMPLE=1 claude</code> is undocumented — it strips <i>every</i> built-in prompt, tools included. His framing: it's Anthropic's own ablation switch. The model comes out <b>“a little bit more intelligent,”</b> but you lose the product guardrails that make it pleasant to drive. <b>An experiment, not a daily driver.</b></li>
-      <li><b>The five self-maintenance routines</b> — one-line prompts on a timer, all daily: <i>find dead code, open a PR deleting it</i> · <i>find experiments rolled out to 100%, remove the flag, ship the winning branch</i> · <i>write tests for the least-covered areas</i> · <i>delete tests that assert nothing useful or duplicate other tests</i> · <i>abstraction police: find near-duplicate abstractions and unify them</i>. <b>This is the bridge into Dynamic Workflows (next slide):</b> one-line prompts on a timer are the fan-out zone's economics. Anthropic runs <b>20–30 of these daily</b> across the CLI, iOS, Android and desktop apps.</li>
+      <li><b>The five self-maintenance routines now have their own slide — slide 15</b>, the take-home at the end of Dynamic Workflows. Don't spend them here; just say the bridge: one-line prompts on a timer are the fan-out zone's economics.</li>
       <li><b>Timer:</b> this slide extends section 5's 3-minute budget. If you're tight, <b>rows 1–3 are the keep</b> — archive and delete, a bare week, add back only on a repeated stumble. Rows 4 and 5 collapse into one sentence each.</li>
     </ul>
   </aside>
@@ -1008,7 +1013,70 @@ body.ov #ovhint{display:block;}
   </aside>
 </section></div>
 
-<!-- ============================== 15 · DEMO HUB ============================== -->
+<!-- ============================== 15 · STEAL THESE (template + routines) ============================== -->
+<div class="cell"><section class="slide" id="s-steal">
+  <div class="rh"><span>Making the most of Claude Opus 5</span><span class="rh-sec">Dynamic Workflows</span></div>
+  <div class="body" style="padding:22px 0 6px;">
+    <div class="eyebrow">Dynamic workflows · steal these</div>
+    <h2 style="font-size:50px; margin-bottom:24px;">Task, verifier, <span class="ac">exit</span>. Then set a timer.</h2>
+
+    <span class="tag" style="color:var(--coral); margin-bottom:15px;">The template (adapt to anything)</span>
+    <ol class="numlist" style="gap:13px;">
+      <li>
+        <span class="n">1</span>
+        <div>
+          <h3 style="font-size:25px; margin-bottom:4px;">TASK — slightly too hard on purpose</h3>
+          <p style="font-size:20px; line-height:1.42; max-width:1600px;">“Give the model slightly harder tasks than what you think it can do.” Not a step list — describe the <b style="color:var(--ink); font-weight:600;">outcome</b>, the guardrails, the exit criteria.</p>
+        </div>
+      </li>
+      <li>
+        <span class="n">2</span>
+        <div>
+          <h3 style="font-size:25px; margin-bottom:4px;">VERIFIER — the part everyone skips</h3>
+          <p style="font-size:20px; line-height:1.42; max-width:1600px;">Give it the same check you'd use yourself: run the real thing, screenshot it, diff it, test it. “<b style="color:var(--ink); font-weight:600;">Make it possible for Claude to verify its work along the way.</b>”</p>
+        </div>
+      </li>
+      <li>
+        <span class="n">3</span>
+        <div>
+          <h3 style="font-size:25px; margin-bottom:4px;">EXIT — “don't stop until you're done”</h3>
+          <p style="font-size:20px; line-height:1.42; max-width:1600px;">An explicit completion condition tied to the verifier, so it can't stall and can't stop early.</p>
+        </div>
+      </li>
+    </ol>
+
+    <span class="tag" style="color:var(--coral); margin:20px 0 16px;">The self-maintenance routines (one-line prompts, on a timer)</span>
+    <table id="steal-tbl">
+      <thead><tr>
+        <th style="width:168px;">Routine</th><th>The one-liner to steal</th>
+      </tr></thead>
+      <tbody>
+        <tr><td class="mono">daily</td><td>Find dead code across the codebase using static and dynamic analysis; open a PR deleting it.</td></tr>
+        <tr><td class="mono">daily</td><td>Find experiments rolled out to 100%; remove the flag and ship the winning branch.</td></tr>
+        <tr><td class="mono">daily</td><td>Write tests for the least-covered areas of the codebase.</td></tr>
+        <tr><td class="mono">daily</td><td>Delete tests that assert nothing useful or duplicate other tests.</td></tr>
+        <tr><td class="mono">daily</td><td>Abstraction police: find near-duplicate abstractions and unify them.</td></tr>
+      </tbody>
+    </table>
+
+    <div class="strip" style="margin-top:16px;">
+      <div class="kicker" style="font-size:26px;">Anthropic runs <span class="ac">20–30 of these</span> across the CLI, iOS, Android and desktop apps — “hundreds of agents every day, sometimes thousands… the work of dozens or hundreds of engineers.” Start with <span class="ac">ONE</span> routine tonight: a cron job + one sentence + a PR you review in the morning.</div>
+    </div>
+    <div class="mono-note" style="margin-top:10px;">Boris Cherny — creator of Claude Code · YC Startup School 2026.</div>
+  </div>
+  <div class="counter"></div>
+  <aside>
+    <b>Speaker notes · the template and the routines</b>
+    <ul>
+      <li><b>Where the template comes from.</b> This is Boris's actual prompt, still running in Claude-in-Slack <b>14+ days later</b>: <i>“I want you to rewrite the Electron app in Swift. Run the Electron app in the Mac virtual machine, screenshot it, and compare it pixel by pixel to the Swift version. Don't stop until you're done.”</i> Claude spawned <b>thousands of agents</b> and — unprompted — opened a Slack channel to live-blog its own progress with screenshots. Four sentences: task, verifier, verifier, exit.</li>
+      <li><b>Row 2 is our own rule, written as a prompt section.</b> Slide 12's safety line: <i>a workflow that modifies code is only as safe as your test gates</i>. The VERIFIER row <b>is</b> that rule — “run the real thing, screenshot it, diff it, test it” is what a test gate looks like when you have to say it out loud.</li>
+      <li><b>Tie the routines back to THE MAP (slide 7).</b> A one-line prompt on a timer is the <b>fan-out zone's economics</b>: priced per attempt, cheap enough to run daily, and a bad run costs you a PR you decline to merge.</li>
+      <li><b>Timer:</b> this slide is the compressible one. <b>Say the closing strip and move on</b> — “start with ONE tonight” — and let the room photograph the rest.</li>
+    </ul>
+  </aside>
+</section></div>
+
+<!-- ============================== 16 · DEMO HUB ============================== -->
 <div class="cell"><section class="slide">
   <div class="rh"><span>Making the most of Claude Opus 5</span><span class="rh-sec">Live demo</span></div>
   <div class="body">
@@ -1066,7 +1134,7 @@ body.ov #ovhint{display:block;}
   </aside>
 </section></div>
 
-<!-- ============================== 16 · THREE ROUTING LAYERS ============================== -->
+<!-- ============================== 17 · THREE ROUTING LAYERS ============================== -->
 <div class="cell"><section class="slide">
   <div class="rh"><span>Making the most of Claude Opus 5</span><span class="rh-sec">Act 2 · smart routing</span></div>
   <div class="body">
@@ -1116,7 +1184,7 @@ body.ov #ovhint{display:block;}
   </aside>
 </section></div>
 
-<!-- ============================== 17 · THE VERIFICATION PASS ============================== -->
+<!-- ============================== 18 · THE VERIFICATION PASS ============================== -->
 <div class="cell"><section class="slide" id="s-verify">
   <div class="rh"><span>Making the most of Claude Opus 5</span><span class="rh-sec">Act 3 · the verification pass</span></div>
   <div class="body">
@@ -1182,7 +1250,7 @@ body.ov #ovhint{display:block;}
   </aside>
 </section></div>
 
-<!-- ============================== 18 · CLOSE ============================== -->
+<!-- ============================== 19 · CLOSE ============================== -->
 <div class="cell"><section class="slide glow">
   <div class="rh"><span>Making the most of Claude Opus 5</span><span class="rh-sec">Close</span></div>
   <div class="body">
@@ -1198,8 +1266,8 @@ body.ov #ovhint{display:block;}
     <b>Speaker notes · close</b>
     <ul>
       <li>Say all three, then stop talking. No new facts after this slide.</li>
-      <li>If the demo ran long, this is the slide to land on directly from slide 15 — skip 16 and 17.</li>
-      <li>Q&amp;A pockets I'm holding: the zone shading (slide 8 notes), "why would Haiku pick the model" (slide 16 notes), "isn't this just LangGraph?" (slide 14 notes).</li>
+      <li>If the demo ran long, this is the slide to land on directly from slide 16 — skip 17 and 18.</li>
+      <li>Q&amp;A pockets I'm holding: the zone shading (slide 8 notes), "why would Haiku pick the model" (slide 17 notes), "isn't this just LangGraph?" (slide 14 notes).</li>
     </ul>
     <b style="margin-top:14px;">Optional 30-sec verbal quick hits (cut first)</b>
     <ul>
@@ -1210,7 +1278,7 @@ body.ov #ovhint{display:block;}
   </aside>
 </section></div>
 
-<!-- ============================== 19 · LINKS ============================== -->
+<!-- ============================== 20 · LINKS ============================== -->
 <div class="cell"><section class="slide">
   <div class="rh"><span>Making the most of Claude Opus 5</span><span class="rh-sec">Links</span></div>
   <div class="body">

@@ -241,7 +241,7 @@ tab-switch to a separate map page. `talk/slides.pdf` is wifi/projector
 insurance — keep it open in a PDF viewer on the presenter laptop as a fallback
 if `slides.html` won't render.
 
-> **TONIGHT:** click through all 19 slides once at the projector's real
+> **TONIGHT:** click through all 20 slides once at the projector's real
 > resolution — confirm nothing clips and slide 7's map renders before the room
 > fills.
 
