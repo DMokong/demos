@@ -1,0 +1,172 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>The Latency Budget Nobody Signed Off On</title>
+<style>
+  :root { --ink: #16181d; --muted: #5b6270; --rule: #e2e5ea; --accent: #b3261e; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: #fbfbfc;
+    color: var(--ink);
+    font: 15px/1.28 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 18px 20px 40px; }
+  header { border-bottom: 1px solid var(--rule); padding-bottom: 10px; margin-bottom: 14px; }
+  .kicker { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); font-weight: 700; }
+  h1 { font-size: 30px; line-height: 1.1; margin: 6px 0 6px; letter-spacing: -0.01em; }
+  .byline { color: var(--muted); font-size: 13px; margin: 0; }
+  .status { display: inline-block; margin-top: 8px; font-size: 11px; border: 1px solid var(--rule); border-radius: 3px; padding: 2px 6px; color: var(--muted); }
+  h2 { font-size: 18px; margin: 18px 0 4px; letter-spacing: -0.01em; }
+  p { margin: 0 0 8px; }
+  ul { margin: 0 0 8px; padding-left: 18px; }
+  li { margin: 0 0 2px; }
+  blockquote { margin: 10px 0; padding: 6px 12px; border-left: 3px solid var(--rule); color: var(--muted); font-style: italic; }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; background: #f1f2f4; padding: 1px 4px; border-radius: 3px; }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; margin: 8px 0; }
+  th, td { text-align: left; border-bottom: 1px solid var(--rule); padding: 4px 6px; }
+  th { color: var(--muted); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; }
+  footer { margin-top: 22px; border-top: 1px solid var(--rule); padding-top: 8px; color: var(--muted); font-size: 12px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="kicker">Engineering · draft</div>
+    <h1>The Latency Budget Nobody Signed Off On</h1>
+    <p class="byline">by A. Draft · unpublished · v0.3</p>
+    <span class="status">DRAFT — not for publication</span>
+  </header>
+
+  <article id="post">
+
+    <p id="lede">Every product team I have worked with has a performance budget. Almost none of them agreed to it. The budget is not the number in the tech spec; it is the sum of every small decision that shipped last quarter — a font here, a tag manager there, a chart library nobody quite owns. By the time anyone measures it, the budget has already been spent, and the conversation turns into an audit instead of a design discussion.</p>
+
+    <p>This is a draft of an argument I keep making in review meetings, written down so I can stop repeating it. Latency is a product decision: decide it deliberately, or it gets decided for you by whoever merged last.</p>
+
+    <h2 id="s-numbers">The three numbers worth arguing about</h2>
+
+    <p>Most dashboards report a dozen metrics and change no behaviour. Three are enough to run a team on, provided you argue about them in public:</p>
+
+    <ul>
+      <li><strong>Time to first byte</strong> — the honest measure of your backend and your CDN configuration, uncontaminated by anything the browser does.</li>
+      <li><strong>Largest contentful paint</strong> — the closest proxy for &#34;did the thing I came for appear,&#34; and the one product managers actually feel.</li>
+      <li><strong>Interaction to next paint</strong> — the number that catches the pages that look finished and behave like wet cement.</li>
+    </ul>
+
+    <p>Pick a target for each, write it in the same document as the feature requirements, and treat a regression as a bug rather than as tech debt. The point is not the specific thresholds; it is that a budget with no owner is a wish.</p>
+
+    <table>
+      <thead><tr><th>Metric</th><th>Target</th><th>Owner</th></tr></thead>
+      <tbody>
+        <tr><td>TTFB</td><td>&lt; 200 ms p75</td><td>platform</td></tr>
+        <tr><td>LCP</td><td>&lt; 2.5 s p75</td><td>product eng</td></tr>
+        <tr><td>INP</td><td>&lt; 200 ms p75</td><td>product eng</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="s-where">Where the budget actually goes</h2>
+
+    <p>Ask a team where their page weight lives and you will usually hear &#34;images.&#34; Images are the polite answer. In practice the expensive part is almost always execution, not transfer: a megabyte of JPEG costs you bandwidth once, while a megabyte of JavaScript costs you parse, compile, and a main thread that cannot respond to a tap.</p>
+
+    <p>The pattern repeats across every audit I have run. Third-party tags arrive as one line in a template and leave as four hundred milliseconds on a mid-range Android. Nobody added them maliciously; each one was locally reasonable. HTTP/2, standardised in <mark data-redline="proposed" title="proposed correction: HTTP/2 was standardised as RFC 7540 in May 2015, not 2012">2015</mark>, was supposed to make bundling obsolete overnight, and a generation of build configs was rewritten on that promise — yet the waterfalls I look at today are still dominated by a handful of blocking requests that arrive too late to matter.</p>
+
+    <h2 id="s-wild">Measuring in the wild</h2>
+
+    <p>Lab numbers are reproducible and field numbers are true. You need both, and teams that only have one of them tend to argue past each other for a quarter before noticing.</p>
+
+    <h2 id="s-stick">Making the budget stick</h2>
+
+    <p>The mechanism matters more than the metric. A budget enforced by a check that runs on every pull request will outlive three reorgs; a budget that lives in a quarterly slide will not survive the quarter. Put the check where the code is, fail the build on a regression above the noise floor, and give people a documented way to say &#34;yes, on purpose&#34; — an escape hatch with a name attached is far better than one that gets added quietly.</p>
+
+    <blockquote>A performance budget is not a diet. It is a currency: it lets you say yes to the expensive feature you actually want by saying no to the four you did not notice you were buying.</blockquote>
+
+    <p>The teams that get this right do not talk about milliseconds much. They talk about what they are spending them on, and they can tell you who signed off.</p>
+
+  </article>
+
+  <footer>
+    Draft notes: needs a stronger close, and the field-data section is thin. Check the HTTP/2 date before this goes anywhere.
+  </footer>
+
+</div>
+
+
+<script type="application/redline+json" id="redline-state">
+{
+  "schema_version": "2.0",
+  "document_key": "result:/home/user/demos/redline/inbox/s-20260729-372474/round-1/result.html",
+  "round": 2,
+  "viewport": {
+    "width": 860,
+    "height": 1343,
+    "gutter_width": 320,
+    "device_pixel_ratio": 1
+  },
+  "annotations": [
+    {
+      "anchor": {
+        "container_tag": "p",
+        "container_text_length": 32,
+        "document_end_offset": 110,
+        "document_start_offset": 106,
+        "end_offset": 32,
+        "prefix": "    by A. Draft · unpublished · ",
+        "quoted_text": "v0.3",
+        "selector": "body > div > header > p",
+        "start_offset": 28,
+        "suffix": "\n    DRAFT — not for publication"
+      },
+      "comment": "bump this to v0.4 — round 1 landed",
+      "created_at": "2026-07-29T18:59:37.441Z",
+      "id": "h1",
+      "intent": "instruct",
+      "number": 1,
+      "rects": [
+        {
+          "h": 15,
+          "w": 25,
+          "x": 244,
+          "y": 77
+        }
+      ]
+    },
+    {
+      "anchor": {
+        "container_tag": "p",
+        "container_text_length": 169,
+        "document_end_offset": 2831,
+        "document_start_offset": 2662,
+        "end_offset": 169,
+        "prefix": "\n    Measuring in the wild\n\n    ",
+        "quoted_text": "Lab numbers are reproducible and field numbers are true. You need both, and teams that only have one of them tend to argue past each other for a quarter before noticing.",
+        "selector": "#post > p:nth-of-type(7)",
+        "start_offset": 0,
+        "suffix": "\n\n    Making the budget stick\n\n "
+      },
+      "comment": "expand this — give one concrete field-vs-lab example, 2-3 more sentences in the same voice",
+      "created_at": "2026-07-29T18:59:37.452Z",
+      "id": "h2",
+      "intent": "expand",
+      "number": 2,
+      "rects": [
+        {
+          "h": 17,
+          "w": 660,
+          "x": 90,
+          "y": 969
+        },
+        {
+          "h": 17,
+          "w": 472,
+          "x": 90,
+          "y": 988
+        }
+      ]
+    }
+  ],
+  "responses": {}
+}
+</script>
+</body></html>

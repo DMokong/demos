@@ -1,0 +1,39 @@
+{
+  "schema_version": "1.0",
+  "tool": "redline",
+  "session_id": "s-20260730-313937",
+  "round": 1,
+  "parent_round": null,
+  "created_at": "2026-07-30T03:57:05Z",
+  "source": {
+    "kind": "sample",
+    "ref": "sample/article.html",
+    "title": "The Latency Budget Nobody Signed Off On",
+    "fetched_at": "2026-07-30T03:54:27Z"
+  },
+  "viewport": {
+    "width": 860,
+    "height": 1378,
+    "gutter_width": 320,
+    "device_pixel_ratio": 2
+  },
+  "counts": {
+    "draw": 7,
+    "highlights": 1,
+    "by_intent": {
+      "instruct": 1
+    },
+    "by_draw_type": {
+      "note": 1,
+      "pen": 5,
+      "rect": 1
+    }
+  },
+  "files": [
+    "manifest.json",
+    "snapshot.html",
+    "annotated.png",
+    "annotations.json"
+  ],
+  "next_step": "Process this round with the redline skill (.claude/skills/redline/SKILL.md): apply the annotations to snapshot.html, then write result.html and changes.md into this directory. Never modify snapshot.html."
+}

@@ -5,6 +5,14 @@ re-verified against the actual repo on 2026-07-29 (fresh build, fresh browser
 run, every staged packet re-audited). Where something is still manual, it says
 **TONIGHT** and gives the exact steps.
 
+> **Amended 2026-07-30.** redline no longer has an inbox: the round is one
+> self-contained HTML bundle, downloaded client-side and dragged back in.
+> The three pending rounds were restaged as bundles under `redline/bundles/`
+> and every demo prompt now names a bundle path. Two behaviours changed with
+> it — **draw marks retire at export and never reach the agent**, and
+> **annotations persist per document rather than per round**. §2.4 is the map;
+> the Act 1 and Act 3 scripts carry the amended prompts.
+
 Read §1 first, then rehearse with §2 open.
 
 ---
@@ -13,7 +21,7 @@ Read §1 first, then rehearse with §2 open.
 
 The eight items from the talk outline (§7), each marked as it actually stands.
 
-### 1.1 Build redline, run the full loop once, stage 3 packets — **DONE**
+### 1.1 Build redline, run the full loop once, stage the demo material — **DONE**
 
 Evidence, all re-run by the acceptance pass:
 
@@ -29,15 +37,21 @@ Evidence, all re-run by the acceptance pass:
   two highlights created through the real Selection API path (one `instruct`,
   one `question`) → clicked the actual **Export round** button → packet written,
   console errors: none from the app.
-- Three pending packets are staged in `redline/inbox` plus one already-processed
-  round. `GET /inbox` reports them correctly (§2.4 has the full map).
+- **Four sessions, five rounds** sit in `redline/inbox` as the audit trail: three
+  pending, two already processed. There is no `/inbox` route any more — the three
+  pending rounds were restaged on 2026-07-30 as v2.0 bundles in `redline/bundles`,
+  which is what the demo prompts point at (§2.4 has the full map).
 - Every anchor in every staged packet was independently re-resolved against its
   own `snapshot.html` in a clean browser page: selector resolves, `container_tag`
   matches, `container_text_length` matches, `slice(start,end) === quoted_text`,
   the document offsets slice to the same text, and the 32-char prefix/suffix both
-  match. **11 highlights, 11/11 exact.** Every quoted string occurs exactly once
+  match. **12 highlights, 12/12 exact.** Every quoted string occurs exactly once
   in its document, so the quoted-text fallback is unambiguous too.
-- All four `annotated.png` files are valid PNGs at 1180 × (1344–1692), i.e.
+- Re-verified after restaging: all three bundles parse through
+  `RedlineCore.parseBundle()` with `schema_version` `"2.0"`, the expected
+  `document_key` and round, and **8/8 anchors resolving on rung 1** against the
+  bundle's own document. `web/test.html` reports **33 passed, 0 failed**.
+- All five `annotated.png` files are valid PNGs at 1180 × (1344–1692), i.e.
   exactly page width 860 + gutter 320. None corrupt, none blank.
 - Session A round-1's `result.html`/`changes.md` clear the brief's Part 3 bar —
   see §1.9 below for the specific evidence.
@@ -189,10 +203,16 @@ cd /home/user/demos/redline
 (`go build ./cmd/redline` first only if you touched Go source; the checked-in
 binary is already current.)
 
-**Run from `redline/`.** Three things depend on it: `./inbox` resolves to the
-staged packets, `sample/landing.html` resolves as a file path (it is *not*
-compiled into the binary — only `sample/article.html` is), and Claude Code picks
-up `.claude/skills/redline/SKILL.md` and `.claude/agents/explorer.md`.
+**Run from `redline/`.** Three things depend on it: `./bundles` resolves to the
+staged bundles the demo prompts name, `sample/landing.html` resolves as a file
+path (it is *not* compiled into the binary — only `sample/article.html` is), and
+Claude Code picks up `.claude/skills/redline/SKILL.md` and
+`.claude/agents/explorer.md`.
+
+**Use one browser profile for the whole talk.** Annotations live in that
+profile's IndexedDB, keyed by document — a different browser or a cleared
+profile starts empty, and the document drawer you show in Act 1's closing move
+goes with it.
 
 Open a **second terminal**, also in `/home/user/demos/redline`, running
 `claude`. That is where all three demo prompts go. A **third** terminal holds the
@@ -238,19 +258,34 @@ python3 /home/user/demos/talk/effort_router_demo.py effort_sweep
    - **Draw mode** (`2`) → `a` for arrow → drag from *inside* a section heading
      up to where it should go. Then `n` for note, click, and type
      *"move this whole section above X"*. Naming the unit ("this whole section")
-     makes the scope unambiguous — the skill's arrow rules key off exactly that.
-3. **Export round** (`⌘E`). Read the written path out loud: it lands in
-   `inbox/<new-session>/round-1/`.
+     makes the scope unambiguous.
 
-**In Claude Code (terminal 2), demo prompt 1 — verbatim from `redline/README.md`:**
+     > **Know before you do this:** draw marks **retire at export** and do not
+     > travel in the bundle — they are page-pixel coordinates that cannot
+     > survive a reflow. The mark drops into the history drawer carrying the
+     > text it covered, and the agent never sees it. Draw it for the story if
+     > you like ("this is how designers actually mark up"), but **do not
+     > promise a moved section in the payoff** — the three highlight intents
+     > are what Act 1 pays off on. §2.4 has the full note.
 
-> Process the newest round in ./inbox using the redline skill. Apply the
-> annotations, reply to questions, verify at both widths, and give me the
-> change summary.
+3. **Export round** (`⌘E`) → **your downloads folder**, not a round directory:
+   `redline-<document>-r<N>.html`. Read the filename out loud. That one file is
+   the document plus an inert state block; there is no packet directory any more.
+
+**In Claude Code (terminal 2), demo prompt 1 — verbatim from `redline/README.md`,
+with the path swapped for the file you just exported:**
+
+> Process the redline bundle at ~/Downloads/redline-article-r1.html — apply the
+> annotations, reply to questions, verify at both widths, and give me the change
+> summary.
+
+If the live export goes sideways, the staged bundle takes the same prompt
+unchanged: `./bundles/redline-article-r1.html`.
 
 Kick it off. **Talk over it — that's Act 2.** Come back for the payoff.
 
-**What to point at when you return** (open the new round's `changes.md`):
+**What to point at when you return** (open the `changes.md` it wrote beside the
+bundle):
 
 - **Replies** — the question got an *answer*, not an edit. The anchored sentence
   is untouched. *"It's a collaborator, not a compiler."*
@@ -262,8 +297,11 @@ Kick it off. **Talk over it — that's Act 2.** Come back for the payoff.
 - **Verification** — it checked its own work at the captured width and 390 px
   without being asked twice.
 
-**The closing move:** back in redline, **Open** → the inbox browser → click
-`result.html` for that session. Same session, **round 2**.
+**The closing move:** back in redline, **drag the file the agent wrote onto the
+page**. Replies land in their cards, applied edits break their anchors and fall
+into history, and the round badge reads **2**. Same document, next round — and
+the gutter's document drawer shows it as one document with a history, not two
+unrelated rounds.
 
 > "And now it's my turn again." The loop is the product.
 
@@ -307,16 +345,17 @@ cents, misrouting down costs quality.
 
 ### Act 3 — Dynamic Workflow (the batch)
 
-**Three pending packets are already staged.** Fire demo prompt 3 — verbatim from
-`redline/README.md`:
+**Three bundles are already staged in `redline/bundles`.** Fire demo prompt 3 —
+verbatim from `redline/README.md`:
 
-> Create a workflow to process every pending round in ./inbox: one agent per
-> session following the redline skill end-to-end, then a final agent that
+> Create a workflow to process every redline bundle in ./bundles: one agent per
+> file following the redline skill end-to-end, then a final agent that
 > cross-checks the results for consistency and compiles a single summary.
 
 *(The talk outline's phrasing is "every packet in ./inbox: one agent per packet".
-Use the README wording above — it matches what is actually staged, since Session A
-holds two rounds and only one of them is pending.)*
+Use the README wording above — it matches what is actually staged. One bundle is
+one unit of work, so "one agent per file" is now literally true; there are no
+directories to disambiguate and nothing pending to filter for.)*
 
 Deterministic guard, say it on stage: **a pixel diff can tell you the page
 changed; it can't read an arrow.** Interpreting redlines is design judgment per
@@ -325,24 +364,73 @@ annotation — if a tool could decide it, you'd use the tool.
 While it spins up: open `/config` → **"Dynamic workflow size"**, mention subagent
 nesting depth 3.
 
-**The payoff:** open the generated JS orchestration script. One agent per session,
+**The payoff:** open the generated JS orchestration script. One agent per bundle,
 a cross-checking judge at the end, results aggregating in variables.
 
 > "In Act 2 the routing was our policy. Here, Opus 5 wrote the routing itself —
-> per task. Fan-out zone does the packets; judgment zone does the consistency
+> per task. Fan-out zone does the bundles; judgment zone does the consistency
 > check. That's the whole map, in one script."
 
 Then close the loop: Act 1's change summary is done — show the designer their
 scribble, applied and verified. **Meta-punchline: the demo was the feedback loop
 your team wishes it had.**
 
-### 2.4 What is staged where — session/round map
+### 2.4 What is staged where — bundle map
 
-Three sessions, four rounds, **three pending**. All IDs and counts verified.
+**Four sessions, five rounds, three of them pending — and each pending round is
+now a bundle in `redline/bundles/`.** That is what the demo prompts point at.
+`redline/inbox/` still holds all five original packets, but it is the audit
+trail now, not the input: nothing in the code reads it and there is no `/inbox`
+route to list it.
+
+| bundle (run from `redline/`) | document | round | annotations | from |
+|---|---|---|---|---|
+| `./bundles/redline-article-r1.html` | the sample article | 1 | 3 highlights | Session C round-1 |
+| `./bundles/redline-article-r2.html` | round-1's *own output* | 2 | 2 highlights | Session A round-2 |
+| `./bundles/redline-landing-r1.html` | the landing page | 1 | 3 highlights | Session B round-1 |
+
+Each is one self-contained HTML file: the `snapshot.html` from its packet
+**byte-for-byte**, plus one inert block —
+
+```html
+<script type="application/redline+json" id="redline-state">
+{ "schema_version": "2.0", "document_key": "…", "round": N,
+  "viewport": {…}, "annotations": [ … ], "responses": {} }
+</script>
+```
+
+All three parse through `RedlineCore.parseBundle()` and **all 8 anchors
+re-resolve on rung 1** — exact selector + offsets, quoted text matching
+character for character — against the bundle's own document. Verified
+2026-07-30, after restaging.
+
+**Two things changed under the old packet story. Say them if asked, and know
+them before Act 1:**
+
+- **Draw marks retire at export and never travel in the bundle.** They are
+  page-pixel coordinates against one layout, so they cannot survive a reflow.
+  Export moves each one into the local history drawer carrying the *text it
+  covered* (captured at draw time — no screenshot involved), and the bundle
+  carries highlights only. **Consequence for Act 1: the arrow the volunteer
+  draws will not reach Claude Code.** The three highlight intents carry the act;
+  Act 1's step 2 has the amended coaching.
+- **Annotations persist per document, not per round.** IndexedDB keyed by
+  `document_key` is the source of truth, so reopening a document brings back
+  every annotation ever made against it, with each one's state re-derived
+  against the current text. There is no round directory and no server-side
+  store; the bundle, not the store, is what travels.
+
+Because the three staged bundles were captured in the original sandbox, their
+`document_key`s carry that machine's paths — `sample:sample/article.html`,
+`result:/home/user/demos/…/round-1/result.html`, and
+`file:///home/user/demos/redline/sample/landing.html`. Only the first will join
+up with anything you annotate live on the presenter laptop. Harmless for the
+demo; worth knowing if you open one and wonder why the gutter is otherwise
+empty.
 
 #### Session A — `s-20260729-372474` — the article, mid-refinement (**the loop story**)
 
-**round-1 — PROCESSED** (has `result.html` + `changes.md`)
+**round-1 — PROCESSED** (has `result.html` + `changes.md`, kept in `inbox/`)
 
 | # | kind | anchor | what it says | agent did |
 |---|---|---|---|---|
@@ -351,30 +439,36 @@ Three sessions, four rounds, **three pending**. All IDs and counts verified.
 | 3 | `fact-check` | *"HTTP/2, standardised in 2012"* | *double-check this date* | Verdict **incorrect** (RFC 7540, May 2015); correction applied inside `<mark data-redline="proposed">`. |
 | d1+d2 | arrow + note | tail in the "three numbers" section, head above "Where the budget actually goes" | *move this whole section — heading, list, and table — above 'Where the budget actually goes'* | Moved heading + `<p>` + `<ul>` + `<p>` + `<table>` as a unit, markup verbatim. |
 
-**round-2 — PENDING**, and it is round-1's *output*: `snapshot.html` here is
-byte-identical to round-1's `result.html`, `parent_round: 1`. Two highlights:
-`instruct` (*bump the byline `v0.3` to `v0.4` — round 1 landed*) and `expand`
-(*grow the thin "Measuring in the wild" paragraph with a concrete field-vs-lab
-example*). Its `annotated.png` visibly carries the yellow proposed-correction
-mark forward — **that image is the best single visual of the loop in the whole
-repo.** Consider putting it on a slide.
+**round-2 → `./bundles/redline-article-r2.html`**, and it is round-1's *output*:
+the document in this bundle is byte-identical to round-1's `result.html`. Two
+highlights: `instruct` (*bump the byline `v0.3` to `v0.4` — round 1 landed*) and
+`expand` (*grow the thin "Measuring in the wild" paragraph with a concrete
+field-vs-lab example*). The block says `"round": 2`, so the loop reads correctly
+on screen with no directory to explain. The packet's `annotated.png` visibly
+carries the yellow proposed-correction mark forward — **that image is the best
+single visual of the loop in the whole repo.** Consider putting it on a slide.
 
-#### Session B — `s-20260729-2a0b58` — the landing page (`sample/landing.html`)
+#### Session B — `s-20260729-2a0b58` → `./bundles/redline-landing-r1.html`
 
-PENDING. Different document type on purpose — it proves "works for articles,
-slides, pages, UIs."
+The landing page (`sample/landing.html`). Different document type on purpose —
+it proves "works for articles, slides, pages, UIs."
 
 | # | kind | target | comment |
 |---|---|---|---|
 | 1 | `instruct` | hero subhead | *cut this to one punchy sentence — lead with "no dashboard archaeology"* |
 | 2 | `delete` | the public-beta banner | *we're GA now — delete this whole banner* |
 | 3 | `expand` | thin "deploys" lead paragraph | *2-3 more sentences, walk through an actual incident scenario* |
-| d1+d2 | rect + note | the pricing card | *add an annual toggle here — "2 months free" framing* |
 
-#### Session C — `s-20260729-dff0fd` — the article again, fresh session
+The packet also holds a rect + note over the pricing card (*add an annual toggle
+here — "2 months free" framing*). **That mark is not in the bundle** — draw marks
+retire at export. It survives in `inbox/` if you want to tell the story, but do
+not promise the agent will act on it.
 
-PENDING. Deliberately non-overlapping targets so Act 3's cross-check judge sees
-varied work. Highlights only, no draw marks:
+#### Session C — `s-20260729-dff0fd` → `./bundles/redline-article-r1.html`
+
+The article again, fresh session. Deliberately non-overlapping targets so Act 3's
+cross-check judge sees varied work. Highlights only, no draw marks — which is why
+this is the safest single bundle to demo:
 
 | # | kind | target | comment |
 |---|---|---|---|
@@ -382,11 +476,33 @@ varied work. Highlights only, no draw marks:
 | 2 | `question` | *"field numbers are true"* | *too cute, or does it land? genuinely torn* |
 | 3 | `instruct` | the blockquote | *make this the pull quote — bump the font size* |
 
-**Ordering, if you run demo prompt 1 before Act 1:** the skill's tie-break picks
-the pending round with the latest `manifest.created_at`, which today is
-**Session C round-1** (18:59:40Z), ahead of Session B (18:59:38Z) and Session A
-round-2 (18:59:37Z). Once your volunteer exports in Act 1, *that* round is newest
-and prompt 1 picks it. This is why Act 1 comes first.
+#### Session D — `s-20260730-313937` — PROCESSED, and the best Q&A ammo in the repo
+
+No bundle: this round already has its `result.html` + `changes.md` in `inbox/`.
+Keep it closed unless someone challenges the "a pixel diff can't read an arrow"
+line — then open its `changes.md`.
+
+Eight marks: **one** highlight (labelled `instruct`, but the comment is two
+questions) and **seven** draw marks — five pen strokes, one rect, one note. The
+agent changed **nothing**, and said why: `result.html` is byte-identical to
+`snapshot.html`. Two pen strokes form an X over the table's `Owner` column with
+no note attached, and it refused to guess between *delete this column*, *these
+owners are wrong*, and *who owns INP?* — then wrote down what each reading would
+have cost. It also downgraded the mislabelled `instruct` to a question rather
+than rewriting the thesis paragraph on a guess.
+
+> "It did nothing, and that is the demo. Six of the eight marks carried no
+> words. A tool that acted anyway would have deleted a column."
+
+Note the mark that shaped the current design: the rect's note reads *"where did
+this quote come from?"* — that text is now captured **at draw time** and retired
+into the history drawer with the mark, which is why draw marks no longer need to
+travel in the bundle at all.
+
+**Choosing a bundle for demo prompt 1:** there is no tie-break rule any more —
+the skill takes the path you name, so name it. Default to
+`./bundles/redline-article-r1.html` (Session C: three clean highlights, one of
+them a `question`, no draw marks to explain).
 
 ---
 
@@ -397,14 +513,15 @@ and prompt 1 picks it. This is why Act 1 comes first.
 The outline's own fallback: **sequential skill runs plus the explorer fan-out you
 already showed in Act 2.** Concretely, in Claude Code:
 
-> Process each pending round in ./inbox one at a time with the redline skill —
-> Session B first, then Session C, then Session A round 2. For each, use the
-> explorer agent to survey the snapshot before editing. When all three are done,
-> cross-check the three result.html files for consistency — shared nav/footer must
-> still match — and compile one summary.
+> Process each bundle in ./bundles one at a time with the redline skill —
+> redline-landing-r1.html first, then redline-article-r1.html, then
+> redline-article-r2.html. For each, use the explorer agent to survey the
+> document before editing. When all three are done, cross-check the three edited
+> documents for consistency — shared nav/footer must still match — and compile
+> one summary.
 
 You lose the generated JS script (the payoff moment) but keep every substantive
-beat: fan-out to Haiku, one agent per packet, a judgment-zone consistency pass at
+beat: fan-out to Haiku, one agent per bundle, a judgment-zone consistency pass at
 the end. Say the quiet part out loud — *"without the workflow runtime this is the
 same graph, run by hand and paid for in conversation context"* — which is
 precisely the argument for the feature.
@@ -420,8 +537,8 @@ redline is hermetic (localhost) apart from one thing.
 |---|---|
 | serving the UI, the sample article, `sample/landing.html` | snapshotting a **URL** (local files and the bundled sample are fine) |
 | draw mode, highlight mode, comments, intents, undo | `annotated.png` (needs html2canvas from cdnjs) |
-| **Export** — writes `manifest.json`, `snapshot.html`, `annotations.json` | live `fact-check` research (falls back to model knowledge, and says so) |
-| the whole inbox browser and the round-N+1 loop | Claude Code itself |
+| **Export** — one self-contained bundle, built client-side | live `fact-check` research (falls back to model knowledge, and says so) |
+| the document drawer, IndexedDB persistence, drag-back import, the round-N+1 loop | Claude Code itself |
 | `opus-5-cost-capability-map.html` (zero external requests) | `effort_router_demo.py` (which is why Act 0 is pre-run) |
 
 The offline export path was tested for real here, with cdnjs genuinely blocked:
@@ -445,8 +562,12 @@ open from disk.
   typing (it autofocuses, but a stray click elsewhere steals it), then **Enter**.
 - Export button appears to hang → it is waiting up to 9 s for html2canvas. It
   will fall through to the offline path on its own.
-- Worst case, skip the live annotation: run demo prompt 1 against the staged
-  packets and narrate Session A's already-written `changes.md`.
+- Volunteer draws a beautiful arrow and you need it to matter → it won't reach
+  the agent (draw marks retire at export). Recover by having them highlight the
+  same range with an `instruct` comment saying the same thing.
+- Worst case, skip the live annotation: run demo prompt 1 against
+  `./bundles/redline-article-r1.html` and narrate Session A round-1's
+  already-written `changes.md` from `inbox/`.
 
 ---
 
@@ -480,25 +601,32 @@ worth knowing before someone in the room asks.
    disclosed rather than hidden. **The html2canvas path has therefore never been
    exercised over a real network.** *Load the redline UI once on the demo wifi and
    confirm the toolbar chip reads "png ready" rather than "png offline."*
-5. **Exporting twice from the same loaded snapshot writes two consecutive rounds.**
-   Legitimate for "I forgot an annotation", but a double-click on Export creates a
-   surprise duplicate round. Click once.
-6. **Round numbering can jump during improvised rehearsal.** Session A already owns
-   round-2, so if you live-annotate Session A's `result.html` you get **round 3**,
-   not round 2. Nothing breaks; the number on screen just won't match the story.
-   Use a *fresh* session for the live Act 1 (the sample article always mints one).
+5. **Exporting twice bumps the round twice and downloads two files.** Legitimate
+   for "I forgot an annotation", but a double-click on Export leaves you with
+   `…-r1.html` and `…-r2.html` in Downloads and a round counter one ahead of the
+   story. Worse, the **first** export already retired the draw marks, so the
+   second bundle is missing nothing but the round number is wrong. Click once,
+   and hand the agent the *highest*-numbered file.
+6. **The round counter is per document and it remembers.** It lives in IndexedDB
+   under the document's key, so re-annotating the sample article during rehearsal
+   leaves the counter incremented for the real run. Nothing breaks; the number on
+   screen just won't match the story. If it matters, rehearse in a private window
+   or clear the `redline` IndexedDB database beforehand.
 7. **`sample/landing.html` is not embedded in the binary** — only
    `sample/article.html` is. Opening the landing page requires the path
    `sample/landing.html` relative to the process's working directory, i.e. run
-   `./redline serve` from `redline/`. Session B's packet records an absolute path
-   (`/home/user/demos/redline/sample/landing.html`), so that packet is not portable
-   to another machine's checkout without editing `manifest.source.ref`.
+   `./redline serve` from `redline/`. The staged landing bundle carries the
+   original sandbox's absolute path as its `document_key`
+   (`file:///home/user/demos/redline/sample/landing.html`), so it will not join up
+   with a locally-opened copy of the same file. The bundle still processes fine —
+   the document travels inside it.
 8. **The skill's two-width verification assumes a browser.** If the presenter's
    Claude Code session has no browser tool, `SKILL.md` instructs it to reason from
    the CSS and say so. That reads fine, but it is a weaker claim than "I looked."
 9. **The anchor guarantee rests on the iframe DOM never being mutated.** Highlights
    are canvas-drawn, never injected. Any future change that writes into the
-   snapshot DOM would silently invalidate every offset in `annotations.json`.
+   snapshot DOM would silently invalidate every offset in the bundle's
+   `redline-state` block.
 10. **`SKILL.md` gives no guidance for an `annotated.png` that exists but is
     useless** (blank, wrong size, partial capture) — only for one that is *absent*.
     An agent could over-trust a bad image. Low risk with the staged packets, which
@@ -537,17 +665,23 @@ python3 ../talk/effort_router_demo.py effort_sweep      # terminal 3 → Act 0 (
 redline shortcuts:  1 highlight · 2 draw · p r a n tools · [ ] stroke
                     ⌘Z undo · ⌘E export · ? help
 
-Act 1 →  "Process the newest round in ./inbox using the redline skill. Apply the
-          annotations, reply to questions, verify at both widths, and give me the
-          change summary."
-Act 2 →  "Before changing anything, survey snapshot.html's structure and voice —
-          layout, styling system, and the author's tone — conclusions only."
-Act 3 →  "Create a workflow to process every pending round in ./inbox: one agent
-          per session following the redline skill end-to-end, then a final agent
-          that cross-checks the results for consistency and compiles a single
-          summary."
+Act 1 →  "Process the redline bundle at <path> — apply the annotations, reply to
+          questions, verify at both widths, and give me the change summary."
+          <path> = the file ⌘E just put in ~/Downloads, or, if that went sideways,
+          ./bundles/redline-article-r1.html
+Act 2 →  "Before changing anything, survey the document inside
+          ./bundles/redline-article-r1.html — layout, styling system, and the
+          author's tone — conclusions only."
+Act 3 →  "Create a workflow to process every redline bundle in ./bundles: one
+          agent per file following the redline skill end-to-end, then a final
+          agent that cross-checks the results for consistency and compiles a
+          single summary."
 
-Staged:  A s-20260729-372474  round-1 PROCESSED · round-2 PENDING (article, the loop)
-         B s-20260729-2a0b58  round-1 PENDING   (landing page)
-         C s-20260729-dff0fd  round-1 PENDING   (article, fresh session)
+Staged:  ./bundles/redline-article-r1.html  r1 · 3 highlights (article, session C)
+         ./bundles/redline-article-r2.html  r2 · 2 highlights (r1's own output)
+         ./bundles/redline-landing-r1.html  r1 · 3 highlights (landing page)
+         ./inbox/  audit trail only — 4 sessions, 5 rounds, no /inbox route
+
+Remember: draw marks retire at export and never reach the agent.
+          Annotations persist per document_key in IndexedDB, not per round.
 ```

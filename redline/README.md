@@ -78,16 +78,21 @@ re-resolves every anchor, which is a decent live proof that the anchors hold.
 
 ## Demo prompts
 
+Run these from `redline/`, where `./bundles` holds three ready-to-process
+bundles: `redline-article-r1.html`, `redline-article-r2.html` (round 1's output,
+annotated again), and `redline-landing-r1.html`.
+
 **1 — the round (Opus, xhigh):**
 
-> Process the redline bundle at ./redline-article-r1.html — apply the
+> Process the redline bundle at ./bundles/redline-article-r1.html — apply the
 > annotations, reply to questions, verify at both widths, and give me the change
 > summary.
 
 **2 — the survey (watch it fan out to the `explorer` agent):**
 
-> Before changing anything, survey the bundled document's structure and voice —
-> layout, styling system, and the author's tone — conclusions only.
+> Before changing anything, survey the document inside
+> ./bundles/redline-article-r1.html — layout, styling system, and the author's
+> tone — conclusions only.
 
 **3 — the batch (a dynamic workflow):**
 
@@ -116,9 +121,16 @@ web/redline-core.js          pure logic: anchors, state, doc keys, bundle I/O
 web/redline-store.js         IndexedDB — one record per document
 web/test.html                the harness: open it in a browser, no runner needed
 sample/article.html          the bundled demo target: a real-feeling draft
+bundles/                     staged v2.0 bundles the demo prompts point at
+inbox/                       audit trail: the packets those bundles came from
 .claude/skills/redline/      SKILL.md — how a round gets processed
 .claude/agents/explorer.md   model: haiku, read-only, conclusions not dumps
 ```
+
+`inbox/` is history, not input. It holds the packets from the retired
+directory-based workflow, kept because the talk's recorded material references
+them; nothing in the code reads it, and a `snapshot.html` in there is still the
+author's turn — never edit one.
 
 Designed-in seam, not built here: the handlers are plain `http.Handler`s and the
 server holds no state of its own — it freezes a page and serves the app, nothing
