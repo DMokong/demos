@@ -355,6 +355,12 @@ const S = {
   hover: null,
   h2c: null,                // Promise<boolean>
   selected: null,
+  docKey: null,             // normalized identity for the mounted document
+  round: 0,                 // incremented by downloadBundle(); lineage only
+  responses: {},            // annotation id → {kind, text}
+  dismissed: {},            // annotation id → true
+  states: {},               // annotation id → derived state string
+  drawHistory: [],          // retired draw marks
 };
 
 const $  = s => document.querySelector(s);
@@ -478,6 +484,21 @@ async function afterMount(){
   }
   await measureDoc();
   buildTextIndex();
+
+  // Everything ever annotated against this document comes back, and each
+  // annotation's state is re-derived against the text as it is right now.
+  S.docKey = deriveDocKey();
+  const rec = await RedlineStore.loadDoc(S.docKey);
+  S.round        = rec.round || 0;
+  S.highlights   = rec.annotations || [];
+  S.responses    = rec.responses   || {};
+  S.dismissed    = rec.dismissed   || {};
+  S.drawHistory  = rec.draw_history || [];
+  S.hseq = S.highlights.reduce((m, h) => Math.max(m, h._seq || 0), 0);
+  recomputeStates();
+  renumber();
+  syncCards();
+
   fitZoom();
   sizeStage();
 }
@@ -601,6 +622,47 @@ function resolveAnchor(a){ buildTextIndex(); return RedlineCore.resolveAnchor(S.
 function rangeInElement(el, s, e){ return RedlineCore.rangeInElement(S.doc, el, s, e); }
 function rangeFromGlobal(gs, ge){ buildTextIndex(); return RedlineCore.rangeFromGlobal(S.doc, S.textIndex, gs, ge); }
 
+/* Identity comes from the snapshot's source, not the browser location:
+   the same document opened from a file path and from its URL must not
+   split into two annotation sets by accident. */
+function deriveDocKey(){
+  const src = S.snap && S.snap.source;
+  if (!src || !src.ref) return "unknown:" + ((S.snap && S.snap.id) || "none");
+  if (src.kind === "url")  return RedlineCore.normalizeKey(src.ref);
+  if (src.kind === "file") return RedlineCore.normalizeKey(
+    /^file:/i.test(src.ref) ? src.ref : "file://" + src.ref);
+  // sample and result are repo-relative; keep the scheme so they never
+  // collide with a real path
+  return RedlineCore.normalizeKey(src.kind + ":" + src.ref);
+}
+
+/* Staleness is never stored — it is a relationship between an anchor and
+   the current text, so it is recomputed on every open. */
+function recomputeStates(){
+  buildTextIndex();
+  S.states = {};
+  for (const h of S.highlights){
+    const resolution = RedlineCore.resolve(S.doc, S.textIndex, h.anchor);
+    S.states[h.id] = RedlineCore.deriveState({
+      resolution,
+      response: S.responses[h.id] || null,
+      dismissed: !!S.dismissed[h.id],
+    });
+    h._rects = resolution.range ? rectsForRange(resolution.range) : [];
+  }
+}
+
+function persist(){
+  if (!S.docKey) return Promise.resolve();
+  return RedlineStore.saveDoc(S.docKey, {
+    round: (S.round || 0),
+    annotations: S.highlights,
+    responses: S.responses,
+    dismissed: S.dismissed,
+    draw_history: S.drawHistory,
+  });
+}
+
 function rectsForRange(range){
   const win = $("#page").contentWindow;
   const sx = win ? win.scrollX : 0, sy = win ? win.scrollY : 0;
@@ -646,6 +708,8 @@ function addHighlight(anchor, rects, intent, comment){
   const ta = document.querySelector('.card[data-id="' + h.id + '"] textarea');
   if (ta){ ta.focus(); }
   refresh();
+  recomputeStates();
+  persist();
   return h;
 }
 
@@ -660,6 +724,8 @@ function renumber(){
 function removeHighlight(id){
   S.highlights = S.highlights.filter(h => h.id !== id);
   renumber(); syncCards(); refresh();
+  recomputeStates();
+  persist();
 }
 
 /* Cards are DOM (so they are editable) and are re-drawn onto the canvas at
@@ -683,10 +749,14 @@ function syncCards(){
       g.appendChild(card);
       card.querySelector("select").addEventListener("change", e => {
         h.intent = e.target.value; paintCard(card, h); refresh();
+        recomputeStates(); persist();
       });
       card.querySelector(".del").addEventListener("click", () => removeHighlight(h.id));
       const ta = card.querySelector("textarea");
-      ta.addEventListener("input", () => { h.comment = ta.value; autosize(ta); layoutCards(); render(); });
+      ta.addEventListener("input", () => {
+        h.comment = ta.value; autosize(ta); layoutCards(); render();
+        recomputeStates(); persist();
+      });
       ta.addEventListener("focus", () => { S.selected = h.id; paintSelection(); });
       card.addEventListener("mousedown", () => { S.selected = h.id; paintSelection(); });
       card.addEventListener("mouseenter", () => setHover(h.id));
