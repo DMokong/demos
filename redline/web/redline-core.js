@@ -130,5 +130,24 @@ function deriveState({ resolution, response, dismissed }){
 const LIVE_STATES = ["open", "answered", "applied-unverified", "needs-reanchor"];
 function isLive(state){ return LIVE_STATES.indexOf(state) >= 0; }
 
-global.RedlineCore = { buildTextIndex, nearestIndexOf, rangeInElement, rangeFromGlobal, resolveAnchor, resolve, countOccurrences, normalizeKey, deriveState, isLive, LIVE_STATES };
+const BLOCK_RE = /<script\s+type="application\/redline\+json"\s+id="redline-state">([\s\S]*?)<\/script>/i;
+
+function parseBundle(html){
+  const m = BLOCK_RE.exec(String(html || ""));
+  if (!m) return null;
+  try { return JSON.parse(m[1]); } catch(_){ return null; }
+}
+
+/* Inert in a normal browser; meaningful only to redline. Replaces any
+   existing block so a bundle can round-trip repeatedly. */
+function serializeBundle(html, state){
+  const json = JSON.stringify(state, null, 2).replace(/<\/script/gi, "<\\/script");
+  const block = '<script type="application/redline+json" id="redline-state">\n' + json + '\n</script>';
+  const s = String(html || "");
+  if (BLOCK_RE.test(s)) return s.replace(BLOCK_RE, block);
+  if (/<\/body>/i.test(s)) return s.replace(/<\/body>/i, block + "\n</body>");
+  return s + "\n" + block;
+}
+
+global.RedlineCore = { buildTextIndex, nearestIndexOf, rangeInElement, rangeFromGlobal, resolveAnchor, resolve, countOccurrences, normalizeKey, deriveState, isLive, LIVE_STATES, parseBundle, serializeBundle };
 })(window);

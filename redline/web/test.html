@@ -136,6 +136,34 @@ eq(st({status:"missing"},  {kind:"applied"}, true),         "dismissed",        
 eq(st({status:"ambiguous"}, null, false),                   "needs-reanchor",     "ambiguous");
 eq(st({status:"ambiguous"}, {kind:"replied"}, false),       "needs-reanchor",     "ambiguous outranks response");
 
+// --- bundle round-trip ---
+(function(){
+  const html = "<!doctype html><html><body><p>Hi</p></body></html>";
+  const state = { schema_version:"2.0", document_key:"sample:article.html",
+                  round:2, annotations:[{id:"h1"}], responses:{} };
+  const out = RedlineCore.serializeBundle(html, state);
+  const back = RedlineCore.parseBundle(out);
+  eq(back.document_key, "sample:article.html", "round-trip preserves key");
+  eq(back.round, 2, "round-trip preserves round");
+  eq(back.annotations.length, 1, "round-trip preserves annotations");
+})();
+
+// Re-serializing replaces the block, never appends a second one
+(function(){
+  const html = "<!doctype html><html><body><p>Hi</p></body></html>";
+  const once = RedlineCore.serializeBundle(html, { schema_version:"2.0", document_key:"k", round:1, annotations:[], responses:{} });
+  const twice = RedlineCore.serializeBundle(once, { schema_version:"2.0", document_key:"k", round:2, annotations:[], responses:{} });
+  const count = (twice.match(/id="redline-state"/g) || []).length;
+  eq(count, 1, "serialize replaces the existing block");
+  eq(RedlineCore.parseBundle(twice).round, 2, "and the surviving block is the new one");
+})();
+
+// A document with no block parses as null, not a throw
+eq(RedlineCore.parseBundle("<!doctype html><html><body></body></html>"), null, "no block parses as null");
+
+// Malformed JSON inside the block parses as null, not a throw
+eq(RedlineCore.parseBundle('<script type="application/redline+json" id="redline-state">{oops</scr'+'ipt>'), null, "malformed block parses as null");
+
 log("\n" + pass + " passed, " + fail + " failed");
 document.title = fail ? "FAIL" : "PASS";
 </script>
