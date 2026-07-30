@@ -164,6 +164,20 @@ eq(RedlineCore.parseBundle("<!doctype html><html><body></body></html>"), null, "
 // Malformed JSON inside the block parses as null, not a throw
 eq(RedlineCore.parseBundle('<script type="application/redline+json" id="redline-state">{oops</scr'+'ipt>'), null, "malformed block parses as null");
 
+// Regression: user text containing $-patterns must not corrupt the block.
+// String.replace treats "$&", "$\'", "$`" and "$1" in a replacement STRING as
+// patterns; the replacer must be a function.
+(function(){
+  const html = '<!doctype html><html><body><p>Hi</p></body></html>';
+  const nasty = "cost is $& and $\' and $` and $1 -- keep verbatim";
+  const once  = RedlineCore.serializeBundle(html, { schema_version:"2.0", document_key:"k", round:1, annotations:[], responses:{} });
+  const twice = RedlineCore.serializeBundle(once, { schema_version:"2.0", document_key:"k", round:2,
+                  annotations:[{ id:"h1", comment: nasty }], responses:{} });
+  const back = RedlineCore.parseBundle(twice);
+  eq(back && back.annotations[0].comment, nasty, "dollar patterns in comments survive re-serialization");
+  eq((twice.match(/id="redline-state"/g) || []).length, 1, "and still exactly one block");
+})();
+
 log("\n" + pass + " passed, " + fail + " failed");
 document.title = fail ? "FAIL" : "PASS";
 </script>

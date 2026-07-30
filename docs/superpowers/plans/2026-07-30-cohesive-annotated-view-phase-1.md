@@ -2,6 +2,14 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+> **STATUS (2026-07-30): all 10 tasks executed and committed**, plus an unplanned Task 11
+> (restage demo packets as bundles). An independent verification pass returned
+> `all_clear: false` and found three defects; two were fatal to the bundle round trip and
+> have since been fixed. Checkboxes below are left unticked deliberately — this header and
+> the changelog in
+> `docs/superpowers/specs/2026-07-30-talk-material-migration-handoff.md` are the record of
+> what was actually done and verified, not the boxes.
+
 **Goal:** Replace redline's per-round viewing with one view of the current document carrying every still-resolving annotation, with state persisted in the browser and Claude Code integrating via a downloaded bundle instead of `./inbox`.
 
 **Architecture:** Pure logic (anchor resolution, state derivation, key normalization, bundle I/O) is extracted from `web/app.html` into `web/redline-core.js` so it can be tested without a framework. Persistence moves to IndexedDB behind `web/redline-store.js`. `web/app.html` keeps only UI and wiring. The Go server drops to a helper: it keeps `/snapshot` and gains a static-asset route, and loses `/inbox`, `/export`, and `internal/packet`.

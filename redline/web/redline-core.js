@@ -144,7 +144,10 @@ function serializeBundle(html, state){
   const json = JSON.stringify(state, null, 2).replace(/<\/script/gi, "<\\/script");
   const block = '<script type="application/redline+json" id="redline-state">\n' + json + '\n</script>';
   const s = String(html || "");
-  if (BLOCK_RE.test(s)) return s.replace(BLOCK_RE, block);
+  // Replacer function, not a replacement string: annotation text is
+  // user-authored, and "$&", "$'", "$`" or "$1" inside it would otherwise be
+  // interpreted as replacement patterns and corrupt the emitted block.
+  if (BLOCK_RE.test(s)) return s.replace(BLOCK_RE, () => block);
   if (/<\/body>/i.test(s)) return s.replace(/<\/body>/i, block + "\n</body>");
   return s + "\n" + block;
 }

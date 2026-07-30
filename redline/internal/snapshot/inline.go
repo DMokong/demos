@@ -247,12 +247,27 @@ func (in *inliner) run(body []byte, kind, ref string) (*Result, error) {
 	}, nil
 }
 
+// isRedlineState reports whether node is redline's own inert state block.
+//
+// Scripts are stripped so that a snapshot cannot move under the author while
+// they annotate it. A <script type="application/redline+json"> is never
+// executed by any browser -- an unknown script type is inert data -- so
+// keeping it cannot violate that invariant. Stripping it, on the other hand,
+// destroys the round trip: a bundle reopened in redline arrives with every
+// annotation it carries silently removed.
+func isRedlineState(node *html.Node) bool {
+	if node.DataAtom != atom.Script {
+		return false
+	}
+	return strings.EqualFold(strings.TrimSpace(attr(node, "type")), "application/redline+json")
+}
+
 func (in *inliner) walk(n *html.Node) {
 	var remove []*html.Node
 	var visit func(*html.Node)
 	visit = func(node *html.Node) {
 		if node.Type == html.ElementNode {
-			if stripTags[node.DataAtom] {
+			if stripTags[node.DataAtom] && !isRedlineState(node) {
 				remove = append(remove, node)
 				return
 			}

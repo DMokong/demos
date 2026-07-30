@@ -84,8 +84,22 @@ These are the invariants you cannot see from any single file:
   this tool can produce.
 - **Document identity is the join key.** `RedlineCore.normalizeKey` derives a
   `document_key` from the source; IndexedDB records, the bundle's
-  `document_key`, and response merges are all keyed by it. The same page opened
-  by path and by URL must not split into two annotation sets.
+  `document_key`, and response merges are all keyed by it.
+- **An embedded state block outranks the path.** `afterMount` reads
+  `#redline-state` out of the mounted document and prefers its `document_key`
+  over `deriveDocKey()`. This is what lets a returned bundle — which lives at a
+  different path than the document it came from — re-attach to its annotations
+  instead of stranding them. The snapshot pipeline preserves that one script
+  (`isRedlineState` in `internal/snapshot/inline.go`) for exactly this reason;
+  it is inert data, so keeping it does not weaken the strip-all-scripts
+  invariant. `TestRedlineStateBlockSurvivesInlining` pins both halves.
+- **KNOWN HOLE: identity forks by how you opened the document.**
+  `deriveDocKey` branches on `src.kind` *before* normalizing, so the bundled
+  sample opened via the button is `sample:sample/article.html` while the same
+  file opened by path is `file:///…/sample/article.html` — two keys, two
+  annotation sets. Fixing it means changing the canonical key scheme, which
+  would orphan the staged bundles under `bundles/`, so it is deliberately
+  deferred rather than patched in a hurry. Do not document this as solved.
 
 ## Gotchas
 

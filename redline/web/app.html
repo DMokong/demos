@@ -488,13 +488,30 @@ async function afterMount(){
 
   // Everything ever annotated against this document comes back, and each
   // annotation's state is re-derived against the text as it is right now.
-  S.docKey = deriveDocKey();
+  //
+  // An embedded state block wins over the path we happened to open: a bundle
+  // returned by the agent lives at a different path than the document it came
+  // from, so deriving identity from the path alone would strand every
+  // annotation it carries.
+  const embedded = readEmbeddedState();
+  S.docKey = (embedded && embedded.document_key) || deriveDocKey();
   const rec = await RedlineStore.loadDoc(S.docKey);
-  S.round        = rec.round || 0;
+  S.round        = Math.max(rec.round || 0, (embedded && embedded.round) || 0);
   S.highlights   = rec.annotations || [];
   S.responses    = rec.responses   || {};
   S.dismissed    = rec.dismissed   || {};
   S.drawHistory  = rec.draw_history || [];
+
+  if (embedded){
+    // Merge by id so a stale bundle can never clobber newer local state.
+    const byId = new Map(S.highlights.map(h => [h.id, h]));
+    for (const a of (embedded.annotations || [])) if (!byId.has(a.id)) S.highlights.push(a);
+    S.responses = Object.assign({}, S.responses, embedded.responses || {});
+    await RedlineStore.saveDoc(S.docKey, {
+      round: S.round, annotations: S.highlights, responses: S.responses,
+      dismissed: S.dismissed, draw_history: S.drawHistory,
+    });
+  }
   S.hseq = S.highlights.reduce((m, h) => Math.max(m, h._seq || 0), 0);
   recomputeStates();
   renumber();
@@ -628,6 +645,26 @@ function rangeFromGlobal(gs, ge){ buildTextIndex(); return RedlineCore.rangeFrom
 /* Identity comes from the snapshot's source, not the browser location:
    the same document opened from a file path and from its URL must not
    split into two annotation sets by accident. */
+/* Read the state block out of the mounted document, if it carries one.
+   The snapshot pipeline deliberately preserves this one script (it is inert
+   data, never executed) precisely so a returned bundle can be reopened. */
+function readEmbeddedState(){
+  if (!S.doc) return null;
+  const el = S.doc.getElementById("redline-state");
+  if (!el) return null;
+  try { return JSON.parse(el.textContent); } catch(_){ return null; }
+}
+
+/* The bundle block is a cross-file contract SKILL.md reads, so only the
+   documented fields belong in it. Underscore-prefixed keys are this app's
+   own bookkeeping (_seq, _rects, _cardTop, _cardH) — _rects in particular is
+   a per-line rectangle array, so leaking it is size bloat as well as noise. */
+function publicAnnotation(h){
+  const out = {};
+  for (const k of Object.keys(h)) if (k.charAt(0) !== "_") out[k] = h[k];
+  return out;
+}
+
 function deriveDocKey(){
   const src = S.snap && S.snap.source;
   if (!src || !src.ref) return "unknown:" + ((S.snap && S.snap.id) || "none");
@@ -1376,7 +1413,9 @@ async function downloadBundle(){
     document_key: S.docKey,
     round: S.round,
     viewport: { width: S.pageW, gutter_width: S.gutterW },
-    annotations: S.highlights.filter(h => RedlineCore.isLive(S.states[h.id] || "open")),
+    annotations: S.highlights
+      .filter(h => RedlineCore.isLive(S.states[h.id] || "open"))
+      .map(publicAnnotation),
     responses: S.responses,
   };
   const blob = new Blob([RedlineCore.serializeBundle(html, state)], { type: "text/html" });
