@@ -124,5 +124,76 @@ overlapped, so their meaning survives into history without an image.
 
 ## Changelog
 
-_Pending — execution is still in flight. This section will list what actually landed, per task,
-with commit SHAs, once the workflow completes and its independent verification pass reports._
+Executed 2026-07-30 as a 12-agent workflow (all 12 completed, 0 errors), followed by a fix pass.
+Net: **22 files changed, +2883 / −1159** across `redline/`.
+
+### Commits, oldest first
+
+| SHA | What |
+|---|---|
+| `43ba3d0` | Extract anchor resolution into `web/redline-core.js`; add `web/test.html` harness; add `GET /js/{name}` asset route |
+| `0a1bd20` | `resolve()` refuses ambiguous anchors instead of guessing; reports which ladder rung landed |
+| `8710494` | `normalizeKey()` + `deriveState()` — the seven-row state table plus `needs-reanchor` |
+| `b523c7c` | `parseBundle()` / `serializeBundle()` for the embedded state block |
+| `69f68dd` | `web/redline-store.js` — IndexedDB persistence, one record per document key |
+| `5c64cb7` | Restore annotations on mount; derive state against current text |
+| `c00b63e` | Gutter state chips, inline agent replies, dismiss, history drawer, document switcher |
+| `4f4d170` | Client-side bundle download and import; `POST /export` removed |
+| `5a29d90` | Draw marks capture `referenced_text`; retire at round end |
+| `9befafd` | Retarget `SKILL.md` to bundles; delete `internal/packet`; remove `GET /inbox` |
+| `b9e6225` | Restage demo packets as v2.0 bundles; update `README.md` prompts and `DEMO_RUNBOOK.md` |
+| `cf5b4e8` | Fix two defects fatal to the bundle round trip, plus two flagged during execution |
+
+### Structural changes
+
+**Added:** `web/redline-core.js`, `web/redline-store.js`, `web/test.html`,
+`internal/snapshot/inline_test.go` (the repo's first Go test), `bundles/` (three v2.0 bundles).
+**Deleted:** `internal/packet/store.go`, `POST /export/{id}`, `GET /inbox`, the `-inbox` flag.
+**Preserved:** `redline/inbox/` remains on disk as an audit trail; nothing reads it.
+
+### Defects found by the independent verification pass
+
+The verifier returned **`all_clear: false`**. This is recorded rather than smoothed over,
+because two findings were holes in the spec and plan themselves, not agent error.
+
+1. **FIXED — the state block was destroyed by its own snapshot pipeline.** Spec §4 retained
+   "scripts are always stripped from snapshots" while §7 put the state in a `<script>` block.
+   Those two requirements cancel: reopening a bundle silently lost every annotation. Fixed in
+   `cf5b4e8` by preserving that single block — a script with an unknown type is inert data and
+   is never executed, so keeping it cannot let a snapshot move under the author, which is the
+   whole reason scripts are stripped. `TestRedlineStateBlockSurvivesInlining` and
+   `TestExecutableScriptsAreStillStripped` pin both halves.
+2. **FIXED — `deriveDocKey` ignored the block's `document_key`.** Spec §7 promised an
+   agent-produced file "under a different path still re-attaches to the correct annotation set."
+   The plan never wired it, so the promise was false. `afterMount` now prefers the embedded key
+   and merges the bundle's annotations and responses **by id**, so a stale bundle cannot clobber
+   newer local state.
+3. **FIXED — `serializeBundle` corrupted blocks containing `$` patterns.** Flagged by the Task 4
+   agent, unreachable by its own tests but live once user comments enter the block: `$&`, `$'`,
+   `` $` `` and `$1` in a replacement *string* are interpreted as patterns. Now a replacer function.
+4. **FIXED — internal bookkeeping leaked into the bundle.** `_seq`, `_rects`, `_cardTop`,
+   `_cardH` were exported alongside the documented fields of a contract `SKILL.md` consumes.
+5. **OPEN — identity forks by how a document was opened.** The bundled sample via the button is
+   `sample:sample/article.html`; the same file via the Open box is `file:///…/sample/article.html`
+   — two keys, two annotation sets. Deferred deliberately: fixing it changes the canonical key
+   scheme and would orphan the three staged bundles. `redline/CLAUDE.md` now documents it as a
+   known hole rather than claiming the guarantee it previously claimed.
+
+### Verified after the fix pass
+
+- JS harness **35 passed, 0 failed** in real Chromium
+- `go build ./... && go vet ./... && gofmt -l .` clean; `go test ./internal/snapshot/` passes
+- A staged bundle reopens with `docKey` taken from the embedded block, 3 annotations restored,
+  states re-derived, dismissed entry correctly in history
+- Snapshotting a bundle retains exactly one script — the state block — with executables stripped
+
+### Deviations worth knowing
+
+- **Three bundles, not four.** Only three of the five staged rounds were pending; two already
+  had `result.html`.
+- **The previously-untracked fourth session was committed.** The runbook now cites it as Session D,
+  so leaving it untracked would have made the runbook reference a file missing from a fresh clone.
+- **The Playwright MCP blocks `file://`**, so every agent ran the harness over a throwaway
+  `python3 -m http.server`. No dependency was added; the plan's `file://` instruction is wrong.
+- **The "do not land before the talk" constraint was overridden** by explicit instruction. That is
+  why Task 11 exists.
