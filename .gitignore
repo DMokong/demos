@@ -5,3 +5,6 @@ __pycache__/
 # scratch
 .DS_Store
 *.log
+
+# holds literal r2mcp credentials (DB URL, Supabase token, OpenRouter key) — never commit
+.mcp.json
