@@ -114,6 +114,28 @@ const AMBIG = `<article id="post">
   eq(r.status, "missing", "absent quote is missing");
 })();
 
+// --- normalizeKey ---
+eq(RedlineCore.normalizeKey("https://blog.dev/post/#section"), "https://blog.dev/post", "strips fragment");
+eq(RedlineCore.normalizeKey("https://blog.dev/post/"), "https://blog.dev/post", "strips trailing slash");
+eq(RedlineCore.normalizeKey("https://blog.dev/p?utm_source=x&id=7"), "https://blog.dev/p?id=7", "strips tracking params, keeps others");
+eq(RedlineCore.normalizeKey("file:///Users/d/a.html"), "file:///Users/d/a.html", "file urls pass through");
+eq(RedlineCore.normalizeKey("sample:article.html"), "sample:article.html", "sample scheme passes through");
+
+// --- deriveState: all seven rows of spec §6 plus ambiguity ---
+const st = (resolution, response, dismissed) =>
+  RedlineCore.deriveState({ resolution, response, dismissed });
+
+eq(st({status:"resolved"}, null, false),                    "open",               "resolved + none");
+eq(st({status:"resolved"}, {kind:"replied"}, false),        "answered",           "resolved + replied");
+eq(st({status:"resolved"}, {kind:"applied"}, false),        "applied-unverified", "resolved + applied");
+eq(st({status:"missing"},  {kind:"applied"}, false),        "done",               "missing + applied");
+eq(st({status:"missing"},  {kind:"replied"}, false),        "answered-moved",     "missing + replied");
+eq(st({status:"missing"},  null, false),                    "stale",              "missing + none");
+eq(st({status:"resolved"}, null, true),                     "dismissed",          "dismissal wins over resolved");
+eq(st({status:"missing"},  {kind:"applied"}, true),         "dismissed",          "dismissal wins over done");
+eq(st({status:"ambiguous"}, null, false),                   "needs-reanchor",     "ambiguous");
+eq(st({status:"ambiguous"}, {kind:"replied"}, false),       "needs-reanchor",     "ambiguous outranks response");
+
 log("\n" + pass + " passed, " + fail + " failed");
 document.title = fail ? "FAIL" : "PASS";
 </script>

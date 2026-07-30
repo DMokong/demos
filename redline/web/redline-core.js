@@ -91,5 +91,44 @@ function resolve(doc, idx, a){
    prefix+quote+suffix, then the quote nearest its recorded position. */
 function resolveAnchor(doc, idx, a){ return resolve(doc, idx, a).range; }
 
-global.RedlineCore = { buildTextIndex, nearestIndexOf, rangeInElement, rangeFromGlobal, resolveAnchor, resolve, countOccurrences };
+const TRACKING = /^(utm_[a-z_]+|fbclid|gclid|mc_eid|ref)$/i;
+
+/* Stable identity for an annotated document. Deliberately NOT a content
+   hash: a hash changes exactly when the page is edited, which is the
+   moment continuity matters most. */
+function normalizeKey(raw){
+  const s = String(raw || "").trim();
+  if (!/^https?:/i.test(s)) return s;              // file:, sample:, anything else verbatim
+  let u;
+  try { u = new URL(s); } catch(_){ return s; }
+  u.hash = "";
+  for (const k of Array.from(u.searchParams.keys())){
+    if (TRACKING.test(k)) u.searchParams.delete(k);
+  }
+  let out = u.origin + u.pathname.replace(/\/+$/, "");
+  const q = u.searchParams.toString();
+  return q ? out + "?" + q : out;
+}
+
+/* Spec §6. Two independent facts — does the anchor resolve, and did the
+   agent respond — plus the user's dismissal, which outranks both. */
+function deriveState({ resolution, response, dismissed }){
+  if (dismissed) return "dismissed";
+  const status = resolution ? resolution.status : "missing";
+  if (status === "ambiguous") return "needs-reanchor";
+  const kind = response ? response.kind : null;
+  if (status === "resolved"){
+    if (kind === "replied") return "answered";
+    if (kind === "applied") return "applied-unverified";
+    return "open";
+  }
+  if (kind === "applied") return "done";
+  if (kind === "replied") return "answered-moved";
+  return "stale";
+}
+
+const LIVE_STATES = ["open", "answered", "applied-unverified", "needs-reanchor"];
+function isLive(state){ return LIVE_STATES.indexOf(state) >= 0; }
+
+global.RedlineCore = { buildTextIndex, nearestIndexOf, rangeInElement, rangeFromGlobal, resolveAnchor, resolve, countOccurrences, normalizeKey, deriveState, isLive, LIVE_STATES };
 })(window);
