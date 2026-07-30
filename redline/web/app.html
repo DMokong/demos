@@ -1014,15 +1014,36 @@ function pt(e){
   return {x: Math.round((e.clientX - r.left) / S.zoom), y: Math.round((e.clientY - r.top) / S.zoom)};
 }
 
+/* At draw time the DOM is available, so a mark's meaning can be preserved
+   as text rather than pixels — no html2canvas, no image storage. */
+function textUnderBounds(b){
+  if (!S.doc || !b) return "";
+  const out = [];
+  const walker = S.doc.createTreeWalker(S.doc.body, NodeFilter.SHOW_ELEMENT);
+  let el;
+  while ((el = walker.nextNode())){
+    if (!el.getBoundingClientRect) continue;
+    const r = el.getBoundingClientRect();
+    const win = $("#page").contentWindow;
+    const top = r.top + (win ? win.scrollY : 0), left = r.left + (win ? win.scrollX : 0);
+    const overlaps = left < b.x + b.w && left + r.width > b.x && top < b.y + b.h && top + r.height > b.y;
+    if (overlaps && el.children.length === 0 && el.textContent.trim()) out.push(el.textContent.trim());
+  }
+  return truncate(out.join(" ").replace(/\s+/g, " "), 240);
+}
+
 function commitShape(d){
+  const bounds = bboxOf(d.points, d.type);
   const obj = {
     id: "d" + (++S.dseq),
     type: d.type,
     color: d.color,
     stroke_width: d.w,
     points: d.points.map(p => ({x:Math.round(p.x), y:Math.round(p.y)})),
-    bounds: bboxOf(d.points, d.type),
+    bounds,
     note: "",
+    // Captured now, while the mark still has a document under it (spec §6.3).
+    referenced_text: textUnderBounds(bounds),
     attached_to: null,
     created_at: new Date().toISOString(),
   };
@@ -1062,20 +1083,44 @@ function openNoteBox(e, p){
 function addNote(p, text){
   const shapes = S.draw.filter(d => d.type !== "note");
   const parent = shapes.length ? shapes[shapes.length - 1] : null;
+  const bounds = {x:Math.round(p.x), y:Math.round(p.y), w:NOTE_W, h:0};
   const obj = {
     id: "d" + (++S.dseq),
     type: "note",
     color: S.color,
     stroke_width: S.strokeWidth,
     points: [{x:Math.round(p.x), y:Math.round(p.y)}],
-    bounds: {x:Math.round(p.x), y:Math.round(p.y), w:NOTE_W, h:0},
+    bounds,
     note: text,
+    // A note points at whatever sits under it; when it is attached to a mark,
+    // that mark's captured text is the better answer.
+    referenced_text: textUnderBounds(bounds) || (parent ? parent.referenced_text || "" : ""),
     attached_to: parent ? parent.id : null,
     created_at: new Date().toISOString(),
   };
   if (parent) parent.note = text;   // mirrored so the shape is self-describing
   S.draw.push(obj);
   refresh();
+}
+
+/* Draw marks are round-scoped: pixel coordinates cannot survive a reflow, so
+   at the round boundary every mark leaves the canvas and enters history with
+   the text it was drawn over (spec §6.3). */
+function retireDrawMarks(){
+  for (const d of S.draw){
+    // An attached note is already mirrored onto its shape's `note`; retiring
+    // both would file the same sentence twice.
+    if (d.type === "note" && d.attached_to) continue;
+    S.drawHistory.push({
+      id: d.id, type: d.type, note: d.note || "",
+      referenced_text: d.referenced_text || "",
+      round: S.round, retired_at: new Date().toISOString(),
+    });
+  }
+  S.draw = [];
+  S.dseq = 0;
+  render();
+  renderHistory();
 }
 
 /* =========================================================================
@@ -1335,9 +1380,7 @@ async function setPageWidth(w){
 async function downloadBundle(){
   if (!S.doc){ toast("open a page first", true); return; }
   S.round = (S.round || 0) + 1;
-  // Draw-mark retirement is wired by the draw-history step; a bundle is a
-  // round boundary for highlights either way.
-  if (typeof retireDrawMarks === "function") retireDrawMarks();
+  retireDrawMarks();
   const html = "<!doctype html>\n" + S.doc.documentElement.outerHTML;
   const state = {
     schema_version: "2.0",
@@ -1603,7 +1646,7 @@ function wireKeys(){
 window.__redline = {
   S,
   setMode, setTool, downloadBundle, importBundle, resolveAnchor, makeAnchor,
-  rectsForRange, buildTextIndex, refresh,
+  rectsForRange, buildTextIndex, refresh, textUnderBounds, retireDrawMarks,
   // Select a text range in the snapshot exactly as a mouse drag would, then
   // let the normal selection handler turn it into a highlight.
   selectAndHighlight(selector, start, end, intent, comment){
