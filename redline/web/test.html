@@ -60,6 +60,60 @@ const ARTICLE = `<article id="post">
 // nearestIndexOf picks the occurrence closest to the hint
 eq(RedlineCore.nearestIndexOf("xx ab yy ab zz", "ab", 12), 9, "nearestIndexOf picks nearest");
 
+const AMBIG = `<article id="post">
+  <p>The same words here.</p>
+  <p>Filler in between.</p>
+  <p>The same words here.</p>
+</article>`;
+
+// Ambiguous: quote occurs twice, no prefix/suffix to disambiguate
+(function(){
+  const d = docFrom(AMBIG);
+  const idx = RedlineCore.buildTextIndex(d);
+  const r = RedlineCore.resolve(d, idx, {
+    selector: "#gone", start_offset: 0, end_offset: 20,
+    quoted_text: "The same words here.", prefix: "", suffix: "", document_start_offset: 0
+  });
+  eq(r.status, "ambiguous", "ambiguous quote is refused, not guessed");
+  eq(r.range, null, "ambiguous resolution yields no range");
+})();
+
+// Ambiguous text becomes unambiguous when prefix/suffix pin it
+(function(){
+  const d = docFrom(AMBIG);
+  const idx = RedlineCore.buildTextIndex(d);
+  const r = RedlineCore.resolve(d, idx, {
+    selector: "#gone", start_offset: 0, end_offset: 20,
+    quoted_text: "The same words here.",
+    prefix: "Filler in between.\n  ", suffix: "", document_start_offset: 0
+  });
+  eq(r.status, "resolved", "prefix disambiguates a repeated quote");
+  eq(r.rung, 2, "and reports it resolved on rung 2");
+})();
+
+// Exact selector hit reports rung 1
+(function(){
+  const d = docFrom(ARTICLE);
+  const idx = RedlineCore.buildTextIndex(d);
+  const r = RedlineCore.resolve(d, idx, {
+    selector: "#post > p:nth-of-type(2)", start_offset: 0, end_offset: 19,
+    quoted_text: "Delta epsilon zeta.", prefix: "", suffix: "", document_start_offset: 0
+  });
+  eq(r.status, "resolved", "exact selector resolves");
+  eq(r.rung, 1, "and reports rung 1");
+})();
+
+// Absent text is missing, not ambiguous
+(function(){
+  const d = docFrom(ARTICLE);
+  const idx = RedlineCore.buildTextIndex(d);
+  const r = RedlineCore.resolve(d, idx, {
+    selector: "#gone", start_offset: 0, end_offset: 5,
+    quoted_text: "absent words", prefix: "", suffix: "", document_start_offset: 0
+  });
+  eq(r.status, "missing", "absent quote is missing");
+})();
+
 log("\n" + pass + " passed, " + fail + " failed");
 document.title = fail ? "FAIL" : "PASS";
 </script>

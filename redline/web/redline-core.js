@@ -52,25 +52,44 @@ function rangeFromGlobal(doc, idx, gs, ge){
   return range;
 }
 
-/* Resolution order mirrors SKILL.md exactly: selector+offsets, then
-   prefix+quote+suffix, then the quote nearest its recorded position. */
-function resolveAnchor(doc, idx, a){
-  if (!doc) return null;
+function countOccurrences(hay, needle){
+  if (!needle) return 0;
+  let c = 0, i = hay.indexOf(needle);
+  while (i >= 0){ c++; i = hay.indexOf(needle, i + 1); }
+  return c;
+}
+
+/* Same ladder as resolveAnchor, but reports which rung landed and refuses
+   to guess when the quote is ambiguous (SKILL.md §4 step 4, client-side). */
+function resolve(doc, idx, a){
+  const miss = { status: "missing", range: null, rung: 0 };
+  if (!doc) return miss;
   let el = null;
   try { el = doc.querySelector(a.selector); } catch(_){}
   if (el && el.textContent.slice(a.start_offset, a.end_offset) === a.quoted_text){
-    return rangeInElement(doc, el, a.start_offset, a.end_offset);
+    const r = rangeInElement(doc, el, a.start_offset, a.end_offset);
+    if (r) return { status: "resolved", range: r, rung: 1 };
   }
   const T = idx ? idx.text : "";
-  let i = -1;
   if (a.prefix || a.suffix){
     const j = T.indexOf((a.prefix||"") + a.quoted_text + (a.suffix||""));
-    if (j >= 0) i = j + (a.prefix||"").length;
+    if (j >= 0){
+      const i = j + (a.prefix||"").length;
+      const r = rangeFromGlobal(doc, idx, i, i + a.quoted_text.length);
+      if (r) return { status: "resolved", range: r, rung: 2 };
+    }
   }
-  if (i < 0) i = nearestIndexOf(T, a.quoted_text, a.document_start_offset || 0);
-  if (i < 0) return null;
-  return rangeFromGlobal(doc, idx, i, i + a.quoted_text.length);
+  const n = countOccurrences(T, a.quoted_text);
+  if (n === 0) return miss;
+  if (n > 1) return { status: "ambiguous", range: null, rung: 0 };
+  const i = T.indexOf(a.quoted_text);
+  const r = rangeFromGlobal(doc, idx, i, i + a.quoted_text.length);
+  return r ? { status: "resolved", range: r, rung: 3 } : miss;
 }
 
-global.RedlineCore = { buildTextIndex, nearestIndexOf, rangeInElement, rangeFromGlobal, resolveAnchor };
+/* Resolution order mirrors SKILL.md exactly: selector+offsets, then
+   prefix+quote+suffix, then the quote nearest its recorded position. */
+function resolveAnchor(doc, idx, a){ return resolve(doc, idx, a).range; }
+
+global.RedlineCore = { buildTextIndex, nearestIndexOf, rangeInElement, rangeFromGlobal, resolveAnchor, resolve, countOccurrences };
 })(window);
