@@ -12,16 +12,14 @@ filename and hide the slot if a file is missing:
   image. Prototype D crops the quadrants out of it and blends them into the
   page; until the file exists, D shows dashed drop-slots where each scene goes.
 
-Prototype E ("The Living Sandbox") animates individual character cutouts.
-These need **transparent** backgrounds — crop the pose from the strip, then
-run it through any background-remover:
+Prototype E ("The Sandbox") needs one picture:
 
-- `cutout-calvin.png` — Calvin kneeling/drawing (panel 1). He kneels
-  bottom-left, bobbing, "drawing" the looping doodles beside him.
-- `cutout-hobbes.png` — Hobbes mid-leap (panel 2). He flies in over the
-  rim every ~16 seconds and lands in an eruption.
-- `cutout-duo.png` — the two of them sitting (panel 4), shown near the
-  footer. Optional.
+- `sandbox-scene.png` — **panel 1 of the strip**: Calvin kneeling at his
+  sandbox, drawing his diagram. This picture *is* the sandbox on the page,
+  so crop it to the box and him. A white background is fine — the page
+  blends it into the paper. Until this file exists, E draws a stand-in
+  sandbox and shows a note saying where to put it.
+- `cutout-hobbes.png` — optional, and completely still: a transparent PNG
+  of Hobbes sitting beside the box, watching. He never jumps or animates.
 
-Nothing in this folder is required — every page renders complete without them
-(E shows a small note pointing at this folder until its cutouts exist).
+Nothing in this folder is required — every page renders complete without them.

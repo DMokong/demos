@@ -3,495 +3,415 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Dustbox — Prototype E · The Living Sandbox</title>
+<title>Dustbox — Prototype E · The Sandbox</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Rock+Salt&family=Patrick+Hand&family=Caveat:wght@600;700&display=swap" rel="stylesheet">
 <style>
   :root {
-    --sand:     #e3cda2;
-    --sand-hi:  #f2e3c2;
-    --sand-lo:  #c9ad79;
+    --paper:    #faf7f0;
+    --paper-2:  #fffdf8;
+    --ink:      #2a2118;
+    --ink-soft: #5b4c3b;
+    --sand:     #d9c29a;
+    --sand-dk:  #c0a271;
+    --sand-lt:  #ecdfc2;
     --carve:    #8a6a41;
-    --carve-dk: #6b5232;
-    --ink:      #4a3722;
     --red:      #b23a2f;
-    --red-dk:   #8a2b22;
-    --rim-t: 30px;   /* far wall  */
-    --rim-s: 24px;   /* side walls */
-    --rim-b: 40px;   /* near wall  */
-  }
-  @media (max-width: 640px) {
-    :root { --rim-t: 18px; --rim-s: 14px; --rim-b: 24px; }
   }
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html { scroll-behavior: smooth; }
 
-  /* ============ THE PAGE IS THE INSIDE OF THE BOX ============ */
   body {
+    background: var(--paper);
     color: var(--ink);
     font-family: "Patrick Hand", "Comic Sans MS", cursive;
     font-size: 20px;
     line-height: 1.5;
     overflow-x: hidden;
-    padding: calc(var(--rim-t) + 10px) calc(var(--rim-s) + 14px) calc(var(--rim-b) + 14px);
-    background-color: var(--sand);
-    background-image:
-      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3'/%3E%3CfeColorMatrix values='0 0 0 0 0.45  0 0 0 0 0.35  0 0 0 0 0.2  0 0 0 0.14 0'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E"),
-      radial-gradient(120vmax 60vmax at 15% -10%, rgba(242,227,194,.8), transparent 60%),
-      radial-gradient(100vmax 55vmax at 90% 35%,  rgba(201,173,121,.5), transparent 55%),
-      radial-gradient(90vmax 50vmax  at 30% 80%,  rgba(242,227,194,.5), transparent 60%),
-      radial-gradient(110vmax 60vmax at 75% 110%, rgba(185,153,104,.45), transparent 60%);
-    cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='28'%3E%3Cpath d='M4 24 C10 16 16 10 25 3 M25 3 l-4 1 M25 3 l-1 4' stroke='%235a4327' stroke-width='2.6' fill='none' stroke-linecap='round'/%3E%3C/svg%3E") 4 24, auto;
   }
 
-  body::before {  /* faint wind ripples */
-    content: "";
-    position: fixed; inset: -10%;
-    background: repeating-linear-gradient(168deg,
-      rgba(107,82,50,.05) 0 2px, transparent 2px 34px, rgba(255,255,255,.05) 34px 36px, transparent 36px 72px);
+  /* sand that has been kicked out to the far corners of the page */
+  .speckle {
+    position: fixed;
+    width: 55vmax; height: 55vmax;
     pointer-events: none;
     z-index: 0;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 0.76  0 0 0 0 0.63  0 0 0 0 0.42  0 0 0 0.55 0'/%3E%3C/filter%3E%3Crect width='240' height='240' filter='url(%23n)'/%3E%3C/svg%3E");
+    -webkit-mask-image: radial-gradient(closest-side, rgba(0,0,0,.9), transparent 70%);
+            mask-image: radial-gradient(closest-side, rgba(0,0,0,.9), transparent 70%);
+    opacity: .45;
   }
+  .speckle.tl { top: -30vmax; left: -30vmax; }
+  .speckle.br { bottom: -32vmax; right: -28vmax; opacity: .6; }
 
-  /* ---- the red wooden rim, fixed around the viewport ---- */
-  .rim {
-    position: fixed;
-    z-index: 70;
-    pointer-events: none;
-    background:
-      repeating-linear-gradient(90deg, transparent 0 46px, rgba(74,55,34,.14) 46px 48px),
-      linear-gradient(180deg, #c14a3e, var(--red) 40%, var(--red-dk));
-    box-shadow: inset 0 -3px 0 rgba(42,25,15,.55), inset 0 2px 0 rgba(255,220,200,.25);
-  }
-  .rim.top    { top: 0; left: 0; right: 0; height: var(--rim-t);
-                box-shadow: inset 0 -4px 0 rgba(42,25,15,.6), 0 4px 10px rgba(74,55,34,.35); }
-  .rim.bottom { bottom: 0; left: 0; right: 0; height: var(--rim-b);
-                background:
-                  repeating-linear-gradient(90deg, transparent 0 46px, rgba(74,55,34,.14) 46px 48px),
-                  linear-gradient(0deg, var(--red-dk), var(--red) 55%, #c14a3e);
-                box-shadow: inset 0 4px 0 rgba(42,25,15,.6), 0 -5px 12px rgba(74,55,34,.4); }
-  .rim.left   { top: 0; bottom: 0; left: 0; width: var(--rim-s);
-                background:
-                  repeating-linear-gradient(0deg, transparent 0 46px, rgba(74,55,34,.14) 46px 48px),
-                  linear-gradient(90deg, #c14a3e, var(--red) 45%, var(--red-dk));
-                box-shadow: inset -3px 0 0 rgba(42,25,15,.55); }
-  .rim.right  { top: 0; bottom: 0; right: 0; width: var(--rim-s);
-                background:
-                  repeating-linear-gradient(0deg, transparent 0 46px, rgba(74,55,34,.14) 46px 48px),
-                  linear-gradient(270deg, #c14a3e, var(--red) 45%, var(--red-dk));
-                box-shadow: inset 3px 0 0 rgba(42,25,15,.55); }
-  .post {
-    position: fixed;
-    width: calc(var(--rim-s) + 16px);
-    height: calc(var(--rim-t) + 14px);
-    background: linear-gradient(135deg, #a63a2e, var(--red-dk));
-    box-shadow: inset 0 0 0 2.5px rgba(42,25,15,.5);
-    z-index: 71;
-    pointer-events: none;
-  }
-  .post.tl { top: 0; left: 0; }  .post.tr { top: 0; right: 0; }
-  .post.bl { bottom: 0; left: 0; height: calc(var(--rim-b) + 12px); }
-  .post.br { bottom: 0; right: 0; height: calc(var(--rim-b) + 12px); }
+  #grains { position: fixed; inset: 0; pointer-events: none; z-index: 60; }
 
-  /* canvases: grooves under the content, kicked sand over EVERYTHING
-     (so a good cannonball sprays over the rim) */
-  #grooves { position: fixed; inset: 0; pointer-events: none; z-index: 1; }
-  #kick    { position: fixed; inset: 0; pointer-events: none; z-index: 90; }
-
-  main, header, footer { position: relative; z-index: 2; }
+  header, main, footer { position: relative; z-index: 5; }
 
   header {
     display: flex; align-items: center; justify-content: space-between;
-    padding: 16px clamp(8px, 3vw, 40px);
+    padding: 22px clamp(20px, 5vw, 64px);
   }
   .wordmark {
     font-family: "Rock Salt", cursive;
-    font-size: 20px; letter-spacing: 2px;
-    color: var(--carve-dk); text-decoration: none;
+    font-size: 21px; letter-spacing: 2px;
+    color: var(--ink); text-decoration: none;
   }
   nav a {
-    color: var(--carve); text-decoration: none; font-size: 20px;
+    font-size: 20px; color: var(--ink-soft); text-decoration: none;
     margin-left: clamp(10px, 2.2vw, 26px);
+    border-bottom: 2px dashed transparent; padding-bottom: 2px;
   }
-  nav a:hover { color: var(--red); }
+  nav a:hover, nav a:focus-visible { color: var(--red); border-bottom-color: var(--red); }
 
-  /* ============ hero ============ */
+  /* ================= hero ================= */
   .hero {
     text-align: center;
-    padding: clamp(40px, 9vh, 100px) 20px 10px;
+    padding: clamp(16px, 3vh, 40px) 20px 0;
   }
-  .carved {
+  .hero h1 {
     font-family: "Rock Salt", cursive;
-    color: var(--carve);
+    font-size: clamp(42px, 8.5vw, 100px);
+    letter-spacing: .04em;
     text-shadow:
-      0 2px 1px rgba(255,248,230,.85),
-      0 3px 2px rgba(255,248,230,.4),
-      0 -2px 3px rgba(74,55,34,.5);
-    letter-spacing: .05em;
+      0 0 1px var(--ink),
+      2px 3px 0 rgba(192,162,113,.55),
+      -2px 4px 12px rgba(192,162,113,.8);
   }
-  .hero h1 { font-size: clamp(44px, 9.5vw, 112px); }
   .hero .tagline {
-    margin-top: 24px;
-    font-size: clamp(21px, 2.7vw, 29px);
-    color: var(--carve-dk);
+    margin-top: 14px;
+    font-size: clamp(20px, 2.5vw, 27px);
+    color: var(--ink-soft);
   }
-  .hero .note {
-    margin-top: 12px;
+  .hero .intro {
+    margin: 8px auto 0;
+    max-width: 620px;
     font-family: "Caveat", cursive;
-    font-size: clamp(20px, 2.3vw, 25px);
-    color: var(--carve);
-    transform: rotate(-1.2deg);
-    display: inline-block;
-  }
-
-  /* ============ CALVIN, DRAWING THE SITE INTO THE SAND ============ */
-  #calvin-station {
-    position: relative;
-    max-width: 1100px;
-    margin: 10px auto 0;
-    min-height: 230px;
-  }
-  #calvin {
-    position: absolute;
-    left: clamp(0px, 3vw, 60px);
-    bottom: 0;
-    width: clamp(120px, 17vw, 210px);
-    filter: drop-shadow(3px 6px 5px rgba(74,55,34,.3));
-    transform-origin: 50% 90%;
-    animation: bob 3.2s ease-in-out infinite;
-    z-index: 3;
-  }
-  @keyframes bob {
-    0%, 100% { transform: rotate(-1deg) translateY(0); }
-    50%      { transform: rotate(1.4deg) translateY(-3px); }
-  }
-
-  /* what he's drawing — strokes that draw themselves, carved style, looping */
-  #doodles {
-    position: absolute;
-    left: clamp(120px, 19vw, 270px);
-    right: 0;
-    bottom: 6px;
-    width: auto;
-    height: 210px;
-    color: var(--carve);
-    opacity: .85;
-  }
-  #doodles path, #doodles rect, #doodles circle {
-    fill: none;
-    stroke: currentColor;
-    stroke-width: 3.4;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-    stroke-dasharray: 100;
-    stroke-dashoffset: 100;
-    animation: drawstroke 16s linear infinite;
-  }
-  /* each element starts a bit later; whole thing fades and restarts */
-  #doodles .d1 { animation-delay: 0s; }
-  #doodles .d2 { animation-delay: 1.6s; }
-  #doodles .d3 { animation-delay: 3.2s; }
-  #doodles .d4 { animation-delay: 4.6s; }
-  #doodles .d5 { animation-delay: 6s; }
-  #doodles .d6 { animation-delay: 7.4s; }
-  #doodles .d7 { animation-delay: 8.8s; }
-  @keyframes drawstroke {
-    0%       { stroke-dashoffset: 100; opacity: 1; }
-    12%      { stroke-dashoffset: 0; }
-    80%      { stroke-dashoffset: 0; opacity: 1; }
-    88%,100% { stroke-dashoffset: 0; opacity: 0; }
-  }
-
-  /* ============ HOBBES, INBOUND ============ */
-  /* outer = horizontal flight, inner = the leap arc, img = spin */
-  #hobbes-x {
-    position: fixed;
-    top: var(--fly-top, 8vh);
-    right: -240px;
-    z-index: 80;
-    pointer-events: none;
-    display: none;
-  }
-  #hobbes-y { position: relative; }
-  #hobbes {
-    width: clamp(130px, 18vw, 230px);
-    filter: drop-shadow(4px 8px 6px rgba(74,55,34,.35));
-  }
-  .flying #hobbes-x { display: block; animation: flyx var(--fly-dur, 1.5s) linear forwards; }
-  .flying #hobbes-y { animation: flyy var(--fly-dur, 1.5s) forwards; }
-  .flying #hobbes   { animation: flyspin var(--fly-dur, 1.5s) ease-in forwards; }
-  @keyframes flyx   { to { transform: translateX(var(--fly-dist, calc(-58vw - 240px))); } }
-  @keyframes flyy   {
-    0%   { transform: translateY(0); animation-timing-function: ease-out; }
-    46%  { transform: translateY(var(--fly-apex, -10vh)); animation-timing-function: ease-in; }
-    100% { transform: translateY(var(--fly-drop, 36vh)); }
-  }
-  /* --flip mirrors the sprite (and the rotation with it) for left-side entries */
-  @keyframes flyspin {
-    0%   { transform: scaleX(var(--flip, 1)) rotate(6deg); }
-    60%  { transform: scaleX(var(--flip, 1)) rotate(-8deg); }
-    100% { transform: scaleX(var(--flip, 1)) rotate(-16deg); opacity: 1; }
-  }
-
-  #splopp {
-    position: fixed;
-    z-index: 95;
-    transform: translate(-50%, -50%) scale(.3) rotate(-8deg);
-    font-family: "Rock Salt", cursive;
-    font-size: clamp(30px, 6vw, 64px);
-    color: var(--red);
-    -webkit-text-stroke: 1.5px var(--ink);
-    opacity: 0;
-    pointer-events: none;
-  }
-  #splopp.go { animation: splopp .9s ease-out forwards; }
-  @keyframes splopp {
-    0%   { opacity: 0; transform: translate(-50%,-50%) scale(.3) rotate(-8deg); }
-    15%  { opacity: 1; transform: translate(-50%,-50%) scale(1.15) rotate(3deg); }
-    30%  { transform: translate(-50%,-50%) scale(1) rotate(-2deg); }
-    70%  { opacity: 1; }
-    100% { opacity: 0; transform: translate(-50%,-58%) scale(1.05); }
-  }
-  #page.shake { animation: shake .45s ease-in-out; }
-  @keyframes shake {
-    0%,100% { transform: translate(0,0); }
-    20% { transform: translate(-5px, 3px) rotate(-.3deg); }
-    40% { transform: translate(5px, -3px) rotate(.3deg); }
-    60% { transform: translate(-4px, 2px); }
-    80% { transform: translate(3px, -2px); }
-  }
-
-  /* the crater he leaves behind, fading like disturbed sand */
-  .crater {
-    position: absolute;
-    z-index: 1;
-    width: 130px; height: 60px;
-    transform: translate(-50%, -50%);
-    background:
-      radial-gradient(60% 55% at 50% 50%, rgba(107,82,50,.35), rgba(107,82,50,.12) 60%, transparent 75%);
-    border-radius: 50%;
-    box-shadow: inset 0 3px 6px rgba(74,55,34,.3), 0 -2px 4px rgba(255,248,230,.5);
-    pointer-events: none;
-    animation: craterfade 9s ease-out forwards;
-  }
-  @keyframes craterfade { 0% { opacity: 1; } 100% { opacity: 0; } }
-
-  /* paw prints padding away from the crater */
-  .paw {
-    position: absolute;
-    z-index: 1;
-    width: 26px; height: 30px;
-    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='26' height='30'%3E%3Cellipse cx='13' cy='20' rx='8' ry='8.5' fill='rgba(90,65,39,.42)'/%3E%3Ccircle cx='5.5' cy='9' r='3.1' fill='rgba(90,65,39,.42)'/%3E%3Ccircle cx='13' cy='6' r='3.4' fill='rgba(90,65,39,.42)'/%3E%3Ccircle cx='20.5' cy='9' r='3.1' fill='rgba(90,65,39,.42)'/%3E%3C/svg%3E") no-repeat center / contain;
-    pointer-events: none;
-    animation: pawfade 10s ease-out forwards;
-  }
-  @keyframes pawfade { 0%, 55% { opacity: .85; } 100% { opacity: 0; } }
-
-  /* handwritten story beats between sections */
-  .beat {
-    font-family: "Caveat", cursive;
-    font-size: clamp(20px, 2.3vw, 25px);
-    color: var(--carve);
-    transform: rotate(-1deg);
-    margin-bottom: 6px;
-  }
-
-  /* the two of them at the bottom of the page */
-  #duo-slot {
-    text-align: center;
-    margin-top: 30px;
-  }
-  #duo {
-    width: clamp(160px, 26vw, 300px);
-    filter: drop-shadow(3px 6px 5px rgba(74,55,34,.3));
-    animation: bob 4.4s ease-in-out infinite;
-    transform-origin: 50% 95%;
-  }
-
-  /* tiny setup note, only shown while cutouts are missing */
-  #cutout-note {
-    position: fixed;
-    right: calc(var(--rim-s) + 12px);
-    bottom: calc(var(--rim-b) + 10px);
-    z-index: 75;
-    max-width: 250px;
-    font-family: "Caveat", cursive;
-    font-size: 17px;
-    color: var(--carve-dk);
-    background: rgba(242,227,194,.92);
-    border: 2px dashed var(--carve);
-    border-radius: 14px 5px 16px 6px;
-    padding: 8px 12px;
-    display: none;
-  }
-  #cutout-note.show { display: block; }
-
-  /* ============ sections ============ */
-  section { max-width: 1060px; margin: 0 auto; padding: 64px 24px 0; }
-  .scrawl-head {
-    display: inline-block;
-    font-family: "Rock Salt", cursive;
-    font-size: clamp(24px, 3.4vw, 34px);
-    margin-bottom: 34px;
+    font-size: clamp(21px, 2.4vw, 26px);
+    color: var(--ink-soft);
     transform: rotate(-.8deg);
   }
 
-  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 30px; }
-  .card {
+  /* ================= THE SANDBOX =================
+     The sandbox is one object sitting on the page: the picture of
+     Calvin kneeling at his box, drawing. What he's drawing runs out
+     of the box and across the paper — and those are the site's
+     sections, so the sitemap literally is his sand diagram. */
+  .stage {
     position: relative;
-    display: block;
-    color: var(--ink);
-    text-decoration: none;
-    padding: 26px 26px 20px;
-    background: radial-gradient(120% 120% at 30% 20%, rgba(242,227,194,.9), rgba(242,227,194,.35) 70%);
-    border-radius: 48% 52% 55% 45% / 52% 46% 54% 48%;
-    box-shadow:
-      inset 0 2px 6px rgba(255,250,238,.8),
-      inset 0 -3px 8px rgba(107,82,50,.25),
-      0 1px 0 rgba(255,250,238,.5);
-    transition: transform .14s ease;
-  }
-  .card::after {
-    content: "";
-    position: absolute; inset: 5px;
-    border: 2.5px solid rgba(107,82,50,.4);
-    border-radius: 48% 52% 55% 45% / 52% 46% 54% 48%;
-    pointer-events: none;
-  }
-  .card:nth-child(2n) { transform: rotate(.8deg); }
-  .card:nth-child(3n) { transform: rotate(-.9deg); }
-  .card:hover { transform: translateY(-4px) rotate(0); }
-  .card h3 {
-    font-family: "Rock Salt", cursive;
-    font-size: 21px;
-    color: var(--carve);
-    text-shadow: 0 1.5px 1px rgba(255,248,230,.8), 0 -1.5px 2px rgba(74,55,34,.4);
-    margin-bottom: 8px;
-  }
-  .card p { font-size: 18px; color: var(--carve-dk); }
-  .card .n {
-    position: absolute; top: 14px; right: 22px;
-    font-family: "Caveat", cursive;
-    font-size: 19px; color: rgba(107,82,50,.55);
+    width: min(1150px, 100%);
+    margin: clamp(6px, 2vh, 24px) auto 0;
+    aspect-ratio: 16 / 9;   /* SVG viewBox 1600x900 maps 1:1 onto this */
   }
 
-  .latest { list-style: none; max-width: 860px; }
+  /* the picture — white background melts into the paper so the box
+     sits ON the page rather than inside a comic panel */
+  .box-art {
+    position: absolute;
+    left: 1%; bottom: 0;
+    width: 47%;
+    mix-blend-mode: multiply;
+    transform: rotate(-1deg);
+    transform-origin: 50% 100%;
+  }
+  .box-art img, .box-art svg { display: block; width: 100%; height: auto; }
+  /* the drawn stand-in hides itself once the real photo loads */
+  body.has-art .box-art .fallback { display: none; }
+  body:not(.has-art) .box-art .real { display: none; }
+
+  /* sand spilling from the box onto the paper */
+  .spill {
+    position: absolute;
+    left: 0; bottom: -2%;
+    width: 60%; height: 16%;
+    pointer-events: none;
+    background:
+      radial-gradient(50% 60% at 22% 60%, rgba(217,194,154,.55), transparent 70%),
+      radial-gradient(40% 55% at 58% 75%, rgba(192,162,113,.4), transparent 70%);
+    -webkit-mask-image: linear-gradient(90deg, #000 55%, transparent);
+            mask-image: linear-gradient(90deg, #000 55%, transparent);
+  }
+
+  /* the diagram he is drawing, in the same coordinate space as .stage */
+  .diagram {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+    overflow: visible;
+  }
+  .diagram path {
+    fill: none;
+    stroke: var(--sand-dk);
+    stroke-width: 4;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  .diagram .lip { stroke: rgba(255,250,238,.9); stroke-width: 7; }
+
+  /* branches are drawn on via the Web Animations API in JS, so they are
+     never left invisible if an animation does not run */
+
+  /* a node = a patch of sand smoothed flat, label carved into it */
+  .node {
+    position: absolute;
+    transform: translate(-50%, -50%) rotate(var(--tilt, 0deg));
+    width: clamp(140px, 15.5vw, 200px);
+    padding: 12px 16px 11px;
+    text-align: center;
+    text-decoration: none;
+    color: var(--ink);
+    background: radial-gradient(120% 120% at 30% 20%, var(--sand-lt), rgba(236,223,194,.6) 72%);
+    border-radius: 48% 52% 55% 45% / 52% 46% 54% 48%;
+    box-shadow:
+      inset 0 2px 5px rgba(255,250,238,.9),
+      inset 0 -3px 7px rgba(138,106,65,.28);
+    transition: transform .14s ease, box-shadow .14s ease;
+  }
+  .node::after {   /* the line he traced around the patch */
+    content: "";
+    position: absolute; inset: 4px;
+    border: 2.5px solid rgba(138,106,65,.42);
+    border-radius: 48% 52% 55% 45% / 52% 46% 54% 48%;
+  }
+  .node b {
+    display: block;
+    font-family: "Rock Salt", cursive;
+    font-size: clamp(12px, 1.15vw, 15px);
+    color: var(--carve);
+    text-shadow: 0 1.5px 1px rgba(255,248,230,.9), 0 -1.5px 2px rgba(74,55,34,.35);
+    letter-spacing: .02em;
+  }
+  .node span {
+    display: block;
+    margin-top: 3px;
+    font-family: "Caveat", cursive;
+    font-size: clamp(15px, 1.35vw, 18px);
+    color: var(--ink-soft);
+  }
+  .node:hover, .node:focus-visible {
+    transform: translate(-50%, -50%) rotate(0deg) scale(1.05);
+    box-shadow:
+      inset 0 2px 5px rgba(255,250,238,.9),
+      inset 0 -3px 7px rgba(138,106,65,.28),
+      0 6px 14px rgba(138,106,65,.22);
+    outline: none;
+  }
+  .node:focus-visible::after { border-color: var(--red); }
+
+  /* optional: Hobbes sitting on the rim, watching. He does not move. */
+  .watcher {
+    position: absolute;
+    left: 40%; bottom: 30%;
+    width: 15%;
+    mix-blend-mode: multiply;
+    pointer-events: none;
+  }
+  .watcher img { display: block; width: 100%; }
+
+  /* ================= below the box ================= */
+  section { max-width: 900px; margin: 0 auto; padding: clamp(40px, 7vh, 80px) 24px 0; }
+  .scrawl-head {
+    display: inline-block;
+    font-family: "Rock Salt", cursive;
+    font-size: clamp(22px, 3vw, 30px);
+  }
+  .scrawl-head + svg { display: block; margin: 2px 0 26px; }
+
+  .latest { list-style: none; }
   .latest li {
-    display: flex; gap: 16px; align-items: baseline;
-    padding: 14px 4px;
-    border-bottom: 2px dotted rgba(107,82,50,.45);
+    display: flex; gap: 14px; align-items: baseline;
+    padding: 13px 6px;
+    border-bottom: 2px dashed var(--sand-dk);
     font-size: 21px;
   }
-  .latest .when { font-family: "Caveat", cursive; color: rgba(107,82,50,.6); min-width: 96px; font-size: 20px; }
+  .latest .when {
+    font-family: "Caveat", cursive; color: var(--sand-dk);
+    min-width: 92px; font-size: 20px;
+  }
   .latest a { color: var(--ink); text-decoration: none; }
-  .latest a:hover { color: var(--red); }
+  .latest a:hover, .latest a:focus-visible { color: var(--red); }
   .latest .tag {
+    font-size: 15px; color: var(--paper); background: var(--ink-soft);
+    border-radius: 8px 3px 9px 4px; padding: 1px 9px;
     margin-left: auto; white-space: nowrap;
-    font-size: 14px; color: var(--sand-hi);
-    background: var(--carve);
-    border-radius: 9px 4px 10px 5px;
-    padding: 1px 10px;
   }
 
   footer {
-    margin-top: 30px;
-    padding: 20px 24px 30px;
+    margin-top: clamp(50px, 8vh, 90px);
+    padding: 30px 24px 90px;
     text-align: center;
+    color: var(--ink-soft);
     font-family: "Caveat", cursive;
-    font-size: 24px;
-    color: var(--carve-dk);
+    font-size: 23px;
   }
 
   .proto-switch {
-    position: fixed; left: calc(var(--rim-s) + 10px); bottom: calc(var(--rim-b) + 8px); z-index: 80;
+    position: fixed; left: 14px; bottom: 12px; z-index: 80;
     font-family: "Patrick Hand", cursive; font-size: 15px;
-    background: var(--sand-hi); border: 2px solid var(--carve-dk);
+    background: var(--paper-2); border: 2px solid var(--ink);
     border-radius: 12px 4px 14px 5px;
     padding: 4px 12px; color: var(--ink); text-decoration: none;
-    opacity: .85;
+    opacity: .75;
   }
   .proto-switch:hover { opacity: 1; }
 
-  @media (max-width: 640px) { nav a:nth-child(n+3) { display: none; } }
-  @media (prefers-reduced-motion: reduce) {
-    #calvin, #duo { animation: none; }
-    #doodles path, #doodles rect, #doodles circle {
-      animation: none; stroke-dashoffset: 0;
-    }
-    #page.shake { animation: none; }
-    html { scroll-behavior: auto; }
+  /* setup hint, only while the real picture is missing */
+  .art-note {
+    position: absolute;
+    left: 1%; top: 2%;
+    max-width: 230px;
+    font-family: "Caveat", cursive;
+    font-size: 17px;
+    color: var(--ink-soft);
+    background: rgba(255,253,248,.92);
+    border: 2px dashed var(--sand-dk);
+    border-radius: 14px 5px 16px 6px;
+    padding: 8px 12px;
   }
+  body.has-art .art-note { display: none; }
+
+  /* ---- stacked layout: the diagram can't connect, so it steps aside ---- */
+  @media (max-width: 860px) {
+    .stage {
+      aspect-ratio: auto;
+      display: flex; flex-direction: column; align-items: center;
+      gap: 22px;
+      padding: 0 18px;
+    }
+    .box-art { position: static; width: min(420px, 100%); transform: none; }
+    .diagram, .spill, .watcher { display: none; }
+    /* stays relative: ::after is positioned against the node, and going
+       static would re-anchor it to .stage as one huge stray outline */
+    .node {
+      position: relative;
+      left: auto !important; top: auto !important;
+      transform: none !important;
+      width: 100%;
+    }
+    .nodes {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 14px;
+      width: 100%;
+      max-width: 420px;
+    }
+    .art-note { position: static; max-width: none; }
+    nav a:nth-child(n+4) { display: none; }
+  }
+
+  @media (max-width: 560px) {
+    header { padding: 16px 16px 10px; gap: 10px; }
+    nav a:nth-child(n+3) { display: none; }
+    nav a { margin-left: 14px; font-size: 18px; }
+    .latest li { flex-wrap: wrap; row-gap: 4px; }
+    .latest .tag { margin-left: 0; }
+  }
+  @media (min-width: 861px) { .nodes { display: contents; } }
 </style>
 </head>
 <body>
 
-<canvas id="grooves"></canvas>
-<canvas id="kick"></canvas>
+<div class="speckle tl"></div>
+<div class="speckle br"></div>
+<canvas id="grains"></canvas>
 
-<!-- the box you're inside of -->
-<div class="rim top"></div><div class="rim bottom"></div>
-<div class="rim left"></div><div class="rim right"></div>
-<div class="post tl"></div><div class="post tr"></div>
-<div class="post bl"></div><div class="post br"></div>
-
-<div id="page">
 <header>
   <a class="wordmark" href="#">DUSTBOX</a>
   <nav>
-    <a href="#box">Projects</a>
-    <a href="#box">Writing</a>
-    <a href="#box">Reports</a>
+    <a href="#projects">Projects</a>
+    <a href="#prototypes">Prototypes</a>
+    <a href="#writing">Writing</a>
+    <a href="#reports">Reports</a>
     <a href="#latest">Latest</a>
   </nav>
 </header>
 
 <main>
   <div class="hero">
-    <h1 class="carved">DUSTBOX</h1>
-    <p class="tagline carved">Projects, prototypes, &amp; messages scrawled in the sand.</p>
-    <p class="note">you're in the box — drag to draw, click to kick sand</p>
+    <h1>DUSTBOX</h1>
+    <p class="tagline">Projects, prototypes, &amp; messages scrawled in the sand.</p>
+    <p class="intro">Hi — I'm Dustin, mostly called Dust. This is my sandbox,
+      and that's the plan for it, drawn in the sand.</p>
   </div>
 
-  <!-- Calvin kneels here, drawing the site into the sand on a loop -->
-  <div id="calvin-station">
-    <img id="calvin" src="assets/cutout-calvin.png" alt=""
-         onerror="this.dataset.missing=1; this.style.display='none'">
-    <svg id="doodles" viewBox="0 0 640 210" preserveAspectRatio="xMinYMax meet" aria-hidden="true">
-      <!-- his master plan, appearing stroke by stroke -->
-      <path class="d1" pathLength="100" d="M18,150 C60,140 96,118 128,90"/>
-      <path class="d2" pathLength="100" d="M128,90 l-16,5 M128,90 l-3,16"/>
-      <rect class="d3" pathLength="100" x="150" y="52" width="118" height="48" rx="7" transform="rotate(-2 209 76)"/>
-      <path class="d4" pathLength="100" d="M170,78 q20,-8 40,0 q18,6 38,-2"/>
-      <path class="d5" pathLength="100" d="M268,80 C308,88 336,108 356,134"/>
-      <rect class="d6" pathLength="100" x="338" y="140" width="108" height="46" rx="7" transform="rotate(1.5 392 163)"/>
-      <path class="d7" pathLength="100" d="M470,160 q34,-40 76,-50 q36,-8 72,4 M596,106 l-15,10 M596,106 l-16,-4"/>
-    </svg>
-  </div>
+  <div class="stage" id="stage">
+    <div class="spill"></div>
 
-  <section id="box">
-    <p class="beat">the plan never survives contact with the tiger — dig anyway:</p>
-    <h2 class="scrawl-head carved">Dug up around here</h2>
-    <div class="grid">
-      <a class="card" href="#"><span class="n">12 builds</span>
-        <h3>Projects</h3><p>Castles that survived the tide — real, shipped, working.</p></a>
-      <a class="card" href="#"><span class="n">forever WIP</span>
-        <h3>Prototypes</h3><p>Half-built and proud of it. Poke them, they wiggle.</p></a>
-      <a class="card" href="#"><span class="n">on stage</span>
-        <h3>Talks &amp; Decks</h3><p>Presentations — show-and-tell for grown-ups.</p></a>
-      <a class="card" href="#"><span class="n">the deep digs</span>
-        <h3>Thesis &amp; Papers</h3><p>Long-form research, dug all the way down.</p></a>
-      <a class="card" href="#"><span class="n">fresh scrawls</span>
-        <h3>Blog</h3><p>Notes drawn in the sand before the wind gets them.</p></a>
-      <a class="card" href="#"><span class="n">signal only</span>
-        <h3>Reports</h3><p>Dispatches for teams &amp; leadership — clear and current.</p></a>
+    <!-- THE SANDBOX. Drop your panel-1 crop in as
+         assets/sandbox-scene.png and it replaces the drawn stand-in. -->
+    <div class="box-art" id="box-art">
+      <img class="real" src="assets/sandbox-scene.png" alt="Calvin kneeling at his sandbox, drawing a diagram in the sand">
+      <svg class="fallback" viewBox="0 0 640 400" role="img"
+           aria-label="A red wooden sandbox with a diagram drawn in the sand">
+        <defs>
+          <filter id="wob" x="-5%" y="-5%" width="110%" height="110%">
+            <feTurbulence type="fractalNoise" baseFrequency="0.014 0.045" numOctaves="2" seed="5" result="n"/>
+            <feDisplacementMap in="SourceGraphic" in2="n" scale="5"/>
+          </filter>
+        </defs>
+        <g filter="url(#wob)" stroke="#2a2118" stroke-width="3.2" stroke-linejoin="round" stroke-linecap="round">
+          <ellipse cx="322" cy="366" rx="290" ry="20" fill="rgba(192,162,113,.3)" stroke="none"/>
+          <polygon points="150,120 500,120 512,146 140,146" fill="#8a2b22"/>
+          <polygon points="150,120 140,146 66,214 66,188" fill="#7c261e"/>
+          <polygon points="500,120 512,146 586,214 586,188" fill="#7c261e"/>
+          <path fill="#d9c29a" d="M146,142 C200,126 280,142 350,134 C420,126 470,140 508,144 L580,196
+                   C500,214 380,208 322,210 C250,212 130,208 72,196 Z"/>
+          <!-- the diagram he has scratched into the sand -->
+          <g stroke="#8a6a41" stroke-width="2.6" fill="none" opacity=".85">
+            <rect x="150" y="150" width="70" height="26" rx="4"/>
+            <rect x="300" y="146" width="78" height="28" rx="4"/>
+            <rect x="234" y="184" width="86" height="24" rx="4"/>
+            <path d="M220,164 L300,160 M340,174 L320,186 M234,196 L196,178"/>
+          </g>
+          <polygon points="66,188 586,188 586,214 66,214" fill="#b23a2f"/>
+          <polygon points="60,214 592,214 592,326 60,326" fill="#b23a2f"/>
+          <line x1="62" y1="270" x2="590" y2="270" stroke-width="2.4"/>
+          <path d="M110,242 q26,-6 52,0 M330,300 q30,-7 58,-1 M440,238 q24,5 48,-1"
+                fill="none" stroke-width="1.8" opacity=".5"/>
+          <rect x="44" y="180" width="30" height="156" fill="#8a2b22"/>
+          <rect x="578" y="180" width="30" height="156" fill="#8a2b22"/>
+        </g>
+      </svg>
     </div>
-  </section>
+
+    <!-- optional, and completely still: Hobbes watching him work -->
+    <div class="watcher" id="watcher" hidden>
+      <img src="assets/cutout-hobbes.png" alt="">
+    </div>
+
+    <!-- what he's drawing: the branches run out of the box to each section -->
+    <svg class="diagram" viewBox="0 0 1600 900" preserveAspectRatio="none" aria-hidden="true">
+      <g id="branches"></g>
+    </svg>
+
+    <div class="nodes">
+      <a class="node" id="projects"   href="#" style="left:60.5%; top:26%;  --tilt:-1.5deg">
+        <b>Projects</b><span>castles that lasted</span></a>
+      <a class="node" id="prototypes" href="#" style="left:83%;   top:15%;  --tilt:1.2deg">
+        <b>Prototypes</b><span>half-built, alive</span></a>
+      <a class="node" id="talks"      href="#" style="left:73%;   top:45%;  --tilt:-.8deg">
+        <b>Talks &amp; Decks</b><span>show and tell</span></a>
+      <a class="node" id="writing"    href="#" style="left:91%;   top:63%;  --tilt:1.4deg">
+        <b>Thesis &amp; Papers</b><span>the deep digs</span></a>
+      <a class="node" id="blog"       href="#" style="left:63%;   top:70%;  --tilt:-1.1deg">
+        <b>Blog</b><span>fresh scrawls</span></a>
+      <a class="node" id="reports"    href="#" style="left:84.5%; top:88%;  --tilt:.9deg">
+        <b>Reports</b><span>for the grown-ups</span></a>
+    </div>
+
+    <p class="art-note">
+      drop your panel-1 crop in as<br><b>dustbox/assets/sandbox-scene.png</b><br>
+      and it replaces this drawing
+    </p>
+  </div>
 
   <section id="latest">
-    <p class="beat">— then somebody cannonballs in, and it's all sky and sand —</p>
-    <h2 class="scrawl-head carved">Fresh tracks</h2>
+    <h2 class="scrawl-head">Fresh from the box</h2>
+    <svg width="290" height="14" viewBox="0 0 290 14" fill="none" aria-hidden="true">
+      <path d="M4,9 C60,3 120,12 175,7 C220,3 260,9 286,5" stroke="#b23a2f" stroke-width="3.4" stroke-linecap="round"/>
+    </svg>
     <ul class="latest">
       <li><span class="when">this week</span><a href="#">Sample entry — your newest prototype goes here</a><span class="tag">prototype</span></li>
       <li><span class="when">last month</span><a href="#">Sample entry — a talk you gave, deck attached</a><span class="tag">deck</span></li>
@@ -499,361 +419,191 @@
       <li><span class="when">a while ago</span><a href="#">Sample entry — that blog post you keep meaning to finish</a><span class="tag">blog</span></li>
     </ul>
   </section>
-
-  <!-- the two of them, sitting in the aftermath -->
-  <div id="duo-slot">
-    <img id="duo" src="assets/cutout-duo.png" alt=""
-         onerror="this.style.display='none'">
-    <p class="beat" style="margin-top:8px">— and tomorrow, we build again.</p>
-  </div>
 </main>
 
 <footer>
-  the wind erases everything eventually — build anyway · Dust
+  built with buckets, shovels, and questionable structural engineering — Dust
 </footer>
-</div>
-
-<!-- Hobbes flies in over the rim on a timer -->
-<div id="hobbes-x"><div id="hobbes-y">
-  <img id="hobbes" src="assets/cutout-hobbes.png" alt=""
-       onerror="this.dataset.missing=1">
-</div></div>
-
-<div id="splopp">SPLOPP!</div>
-
-<div id="cutout-note">
-  psst — drop <b>cutout-calvin.png</b>, <b>cutout-hobbes.png</b> &amp;
-  <b>cutout-duo.png</b> (transparent PNGs) into <b>dustbox/assets/</b>
-  and they'll be in here playing
-</div>
 
 <a class="proto-switch" href="index.html">← all prototypes</a>
 
 <script>
 /* ============================================================
-   THE LIVING SANDBOX
-   The viewport is the box: red rim fixed around the edges, sand
-   underfoot.  Calvin (your cutout) kneels and "draws" looping
-   stick doodles while grains trickle off his stroke; Hobbes (your
-   cutout) periodically leaps in over the rim and lands in a full
-   particle eruption, SPLOPP, screen shake, and a fading crater.
-   You can play too: drag to carve grooves, click to kick sand.
+   THE SANDBOX
+   One box on the page. The diagram Calvin is drawing runs out of
+   it to each section of the site, scratched on as the page loads.
+   Sand drifts off the box and kicks up when you poke it.
+   Nothing flies in, lands, or interrupts.
    ============================================================ */
 (function () {
-  const grooves = document.getElementById('grooves');
-  const gctx = grooves.getContext('2d');
-  const kick = document.getElementById('kick');
-  const kctx = kick.getContext('2d');
-  const DPR = Math.min(window.devicePixelRatio || 1, 2);
-  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const stage = document.getElementById('stage');
+  const art   = document.getElementById('box-art');
 
+  /* ---------- swap in the real picture when it exists ---------- */
+  const real = document.querySelector('.box-art .real');
+  real.addEventListener('load', () => {
+    document.body.classList.add('has-art');
+    drawBranches();          /* the photo changes the box geometry */
+  });
+  real.addEventListener('error', () => real.remove());
+
+  /* optional still Hobbes, only if the file is there */
+  const watcher = document.getElementById('watcher');
+  const wimg = watcher.querySelector('img');
+  wimg.addEventListener('load',  () => watcher.hidden = false);
+  wimg.addEventListener('error', () => watcher.remove());
+
+  /* ---------- draw the branches from the box to each node ---------- */
+  const NS = 'http://www.w3.org/2000/svg';
+  const branches = document.getElementById('branches');
+  const VB = { w: 1600, h: 900 };   /* the diagram's coordinate space */
+
+  /* Where his stick meets the sand, derived from the artwork's real box so
+     this still lands correctly when the drawing is swapped for the photo. */
+  function originPoint() {
+    const s = stage.getBoundingClientRect();
+    const a = art.getBoundingClientRect();
+    if (!s.width || !a.width) return { x: VB.w * 0.3, y: VB.h * 0.66 };
+    return {
+      x: ((a.left - s.left) + a.width * 0.62) / s.width * VB.w,
+      y: ((a.top  - s.top)  + a.height * 0.30) / s.height * VB.h,
+    };
+  }
+
+  function drawBranches() {
+    branches.textContent = '';
+    if (getComputedStyle(document.querySelector('.diagram')).display === 'none') return;
+    const O = originPoint();
+
+    document.querySelectorAll('.node').forEach((node, i) => {
+      const x = parseFloat(node.style.left) / 100 * VB.w;
+      const y = parseFloat(node.style.top)  / 100 * VB.h;
+      /* stop short of the node so the groove runs up to its edge */
+      const dx = x - O.x, dy = y - O.y;
+      const len = Math.hypot(dx, dy) || 1;
+      const ex = x - dx / len * 78, ey = y - dy / len * 42;
+      /* a wandering, hand-drawn path rather than a straight line */
+      const mx = (O.x + ex) / 2 + (i % 2 ? 45 : -45);
+      const my = (O.y + ey) / 2 + (i % 3 ? -55 : 65);
+      const d = `M${O.x.toFixed(1)},${O.y.toFixed(1)} Q${mx.toFixed(1)},${my.toFixed(1)} ${ex.toFixed(1)},${ey.toFixed(1)}`;
+
+      /* bright lip under a darker furrow = a groove pressed into sand */
+      const lip = document.createElementNS(NS, 'path');
+      lip.setAttribute('d', d);
+      lip.setAttribute('class', 'lip');
+      lip.setAttribute('transform', 'translate(2,4)');
+      const ink = document.createElementNS(NS, 'path');
+      ink.setAttribute('d', d);
+
+      for (const p of [lip, ink]) {
+        branches.appendChild(p);
+        if (reduced) continue;
+        const L = p.getTotalLength();
+        const delay = 350 + i * 160;
+        p.style.strokeDasharray = L;
+        p.animate(
+          [{ strokeDashoffset: L }, { strokeDashoffset: 0 }],
+          { duration: 900, delay, easing: 'ease-out', fill: 'backwards' }
+        );
+        /* safety net: a stalled or unsupported animation must never leave
+           the groove invisible — clear the dash once it should be done */
+        setTimeout(() => { p.style.strokeDasharray = ''; }, delay + 1200);
+      }
+    });
+  }
+
+  /* wait for fonts/art so the measured geometry is final */
+  drawBranches();
+  addEventListener('load', drawBranches);
+  addEventListener('resize', () => { clearTimeout(drawBranches._t); drawBranches._t = setTimeout(drawBranches, 150); });
+
+  /* ---------- sand grains ---------- */
+  const canvas = document.getElementById('grains');
+  const ctx = canvas.getContext('2d');
+  const DPR = Math.min(devicePixelRatio || 1, 2);
   let W, H;
   function resize() {
-    const snap = document.createElement('canvas');
-    snap.width = grooves.width || 1; snap.height = grooves.height || 1;
-    snap.getContext('2d').drawImage(grooves, 0, 0);
-    W = Math.floor(innerWidth * DPR); H = Math.floor(innerHeight * DPR);
-    for (const c of [grooves, kick]) {
-      c.width = W; c.height = H;
-      c.style.width = innerWidth + 'px';
-      c.style.height = innerHeight + 'px';
-    }
-    gctx.drawImage(snap, 0, 0);
+    W = canvas.width  = Math.floor(innerWidth  * DPR);
+    H = canvas.height = Math.floor(innerHeight * DPR);
+    canvas.style.width  = innerWidth + 'px';
+    canvas.style.height = innerHeight + 'px';
   }
   resize();
   addEventListener('resize', resize);
 
-  /* ---------- grains ---------- */
-  const TONES = ['#e3cda2', '#c9ad79', '#f2e3c2', '#b3925f', '#d5bd90'];
-  const SPECK = ['#8a6a41', '#6b5232'];
+  const TONES = ['#d9c29a', '#c0a271', '#ecdfc2', '#b08d5b', '#cbb287'];
+  const SPECK = ['#7a5f3e', '#5b4c3b'];
   const grains = [];
   function grain(x, y, o = {}) {
-    if (grains.length > 900) grains.splice(0, 30);
-    const a = (o.angle ?? -Math.PI / 2) + (Math.random() - .5) * (o.spread ?? 1.4);
-    const sp = (o.speed ?? 7) * (0.35 + Math.random() * 0.9) * DPR;
+    if (grains.length > 700) grains.splice(0, 30);
+    const a  = (o.angle ?? -Math.PI / 2) + (Math.random() - .5) * (o.spread ?? 1.3);
+    const sp = (o.speed ?? 6) * (0.35 + Math.random() * 0.9) * DPR;
     grains.push({
       x: x * DPR, y: y * DPR,
-      vx: Math.cos(a) * sp + (o.wind ?? 0) * DPR, vy: Math.sin(a) * sp,
+      vx: Math.cos(a) * sp + (o.wind ?? 0) * DPR,
+      vy: Math.sin(a) * sp,
       r: (0.9 + Math.random() * 2) * DPR,
       rot: Math.random() * Math.PI, vr: (Math.random() - .5) * .3,
       life: 1, decay: 0.008 + Math.random() * 0.012,
-      g: (o.gravity ?? 0.17) * DPR,
-      color: Math.random() < .12 ? SPECK[(Math.random()*SPECK.length)|0] : TONES[(Math.random()*TONES.length)|0],
+      g: (o.gravity ?? 0.16) * DPR,
+      color: Math.random() < .12 ? SPECK[Math.random() * SPECK.length | 0]
+                                 : TONES[Math.random() * TONES.length | 0],
     });
-  }
-
-  /* tornado grain: orbits a moving center, spiralling out and up */
-  function spawnVortex(cx, cy) {
-    if (grains.length > 900) grains.splice(0, 30);
-    grains.push({
-      mode: 'vortex',
-      cx: cx * DPR, cy: cy * DPR,
-      ang: Math.random() * Math.PI * 2,
-      rad: (6 + Math.random() * 16) * DPR,
-      va: 0.22 + Math.random() * 0.12,
-      grow: (0.4 + Math.random() * 0.7) * DPR,
-      rise: (0.9 + Math.random() * 1.3) * DPR,
-      lift: 0,
-      r: (0.9 + Math.random() * 2) * DPR,
-      rot: Math.random() * Math.PI, vr: (Math.random() - .5) * .5,
-      life: 1, decay: 0.007 + Math.random() * 0.009,
-      color: Math.random() < .12 ? SPECK[(Math.random()*SPECK.length)|0] : TONES[(Math.random()*TONES.length)|0],
-    });
-  }
-
-  /* ---------- the wandering dust devil ---------- */
-  let tornado = null;
-  function startTornado(yBase) {
-    if (reduced || tornado) return;
-    const fromLeft = Math.random() < 0.5;
-    tornado = {
-      x: fromLeft ? -30 : innerWidth + 30,
-      dir: fromLeft ? 1 : -1,
-      yBase: yBase ?? innerHeight * (0.35 + Math.random() * 0.35),
-      t: 0,
-    };
-  }
-  function tornadoStep(dt) {
-    if (!tornado) return;
-    tornado.t += dt;
-    tornado.x += tornado.dir * 2.4 * dt;
-    const y = tornado.yBase + Math.sin(tornado.t * 0.05) * 50;
-    for (let i = 0; i < 5; i++) spawnVortex(tornado.x, y);
-    /* the wind eats whatever was drawn in its path */
-    gctx.save();
-    gctx.globalCompositeOperation = 'destination-out';
-    const gr = gctx.createRadialGradient(tornado.x * DPR, y * DPR, 0, tornado.x * DPR, y * DPR, 70 * DPR);
-    gr.addColorStop(0, 'rgba(0,0,0,0.16)');
-    gr.addColorStop(1, 'rgba(0,0,0,0)');
-    gctx.fillStyle = gr;
-    gctx.beginPath(); gctx.arc(tornado.x * DPR, y * DPR, 70 * DPR, 0, Math.PI * 2); gctx.fill();
-    gctx.restore();
-    if (tornado.x < -60 || tornado.x > innerWidth + 60) tornado = null;
   }
 
   let last = performance.now();
   function frame(now) {
     const dt = Math.min((now - last) / 16.7, 3);
     last = now;
-    kctx.clearRect(0, 0, W, H);
-    tornadoStep(dt);
+    ctx.clearRect(0, 0, W, H);
     for (let i = grains.length - 1; i >= 0; i--) {
       const p = grains[i];
-      let px, py;
-      if (p.mode === 'vortex') {
-        p.ang += p.va * dt;
-        p.rad += p.grow * dt;
-        p.lift += p.rise * dt;
-        px = p.cx + Math.cos(p.ang) * p.rad;
-        py = p.cy - p.lift + Math.sin(p.ang) * p.rad * 0.32; /* squashed = seen at an angle */
-      } else {
-        p.vy += p.g * dt; p.vx *= .985; p.vy *= .992;
-        p.x += p.vx * dt; p.y += p.vy * dt;
-        px = p.x; py = p.y;
-      }
-      p.rot += p.vr * dt;
+      p.vy += p.g * dt; p.vx *= .985; p.vy *= .992;
+      p.x += p.vx * dt; p.y += p.vy * dt; p.rot += p.vr * dt;
       p.life -= p.decay * dt;
-      if (p.life <= 0 || py > H + 20 || py < -40) { grains.splice(i, 1); continue; }
-      kctx.save();
-      kctx.globalAlpha = Math.min(1, p.life * 1.6);
-      kctx.translate(px, py); kctx.rotate(p.rot);
-      kctx.fillStyle = p.color;
-      kctx.fillRect(-p.r, -p.r * .7, p.r * 2, p.r * 1.4);
-      kctx.restore();
+      if (p.life <= 0 || p.y > H + 20) { grains.splice(i, 1); continue; }
+      ctx.save();
+      ctx.globalAlpha = Math.min(1, p.life * 1.6);
+      ctx.translate(p.x, p.y); ctx.rotate(p.rot);
+      ctx.fillStyle = p.color;
+      ctx.fillRect(-p.r, -p.r * .7, p.r * 2, p.r * 1.4);
+      ctx.restore();
     }
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
 
-  /* a dust devil wanders through every minute or so */
-  if (!reduced) {
-    setInterval(() => {
-      if (document.hidden || Math.random() < 0.7) return;
-      startTornado();
-    }, 20000);
-  }
-
-  /* ---------- you, playing: drag = draw, click = kick ---------- */
-  let prev = null;
-  function carve(x, y) {
-    x *= DPR; y *= DPR;
-    if (prev) {
-      const w = 5 * DPR;
-      gctx.lineCap = 'round'; gctx.lineJoin = 'round';
-      gctx.strokeStyle = 'rgba(255,248,228,.75)';
-      gctx.lineWidth = w + 2.5 * DPR;
-      gctx.beginPath(); gctx.moveTo(prev.x + 2*DPR, prev.y + 2.5*DPR); gctx.lineTo(x + 2*DPR, y + 2.5*DPR); gctx.stroke();
-      gctx.strokeStyle = 'rgba(107,82,50,.6)';
-      gctx.lineWidth = w;
-      gctx.beginPath(); gctx.moveTo(prev.x, prev.y); gctx.lineTo(x, y); gctx.stroke();
-      if (Math.random() < 0.5) grain(x / DPR, y / DPR, { speed: 1.6, spread: 3, gravity: 0.08 });
-    }
-    prev = { x, y };
-  }
-  addEventListener('pointermove', e => { if (e.buttons === 1) carve(e.clientX, e.clientY); });
-  addEventListener('pointerdown', e => {
-    prev = null; carve(e.clientX, e.clientY);
-    for (let i = 0; i < 55; i++) grain(e.clientX, e.clientY, { speed: 8, spread: 1.6 });
-  });
-  addEventListener('pointerup', () => { prev = null; });
-
-  if (!reduced) {
-    setInterval(() => {          /* the wind slowly erases grooves */
-      if (document.hidden) return;
-      gctx.globalCompositeOperation = 'destination-out';
-      gctx.fillStyle = 'rgba(0,0,0,0.03)';
-      gctx.fillRect(0, 0, W, H);
-      gctx.globalCompositeOperation = 'source-over';
-    }, 1200);
-  }
-
-  /* ---------- Calvin: grains trickle off his drawing stick ---------- */
-  const calvin = document.getElementById('calvin');
-  const doodles = document.getElementById('doodles');
+  /* the box never quite settles — a few grains drift off the sand */
   if (!reduced) {
     setInterval(() => {
       if (document.hidden) return;
-      const r = doodles.getBoundingClientRect();
+      const r = art.getBoundingClientRect();
       if (r.bottom < 0 || r.top > innerHeight) return;
-      /* roughly track the looping draw cursor left-to-right */
-      const cycle = (performance.now() / 16000) % 1;
-      const x = r.left + r.width * Math.min(0.95, cycle * 1.15);
-      const y = r.top + r.height * (0.45 + Math.random() * 0.35);
-      grain(x, y, { speed: 1.4, spread: 2.6, gravity: 0.07 });
-    }, 240);
+      grain(r.left + r.width * (0.2 + Math.random() * 0.6),
+            r.top + r.height * (0.35 + Math.random() * 0.15),
+            { speed: 1.5, spread: 2.4, gravity: 0.05, wind: 0.35 });
+    }, 700);
   }
 
-  /* ---------- Hobbes: the recurring cannonball ---------- */
-  const hobbes   = document.getElementById('hobbes');
-  const hobbesX  = document.getElementById('hobbes-x');
-  const splopp   = document.getElementById('splopp');
-
-  function eruptionAt(cx, cy) {
-    for (let i = 0; i < 170; i++) {
-      grain(cx + (Math.random() - .5) * 140, cy + (Math.random() - .5) * 30, {
-        speed: 9 + Math.random() * 7, spread: 1.0, gravity: 0.2,
-        wind: (Math.random() - .5) * 5,
-      });
-    }
-    splopp.style.left = cx + 'px';
-    splopp.style.top  = (cy - 60) + 'px';
-    splopp.classList.remove('go');
-    void splopp.offsetWidth;
-    splopp.classList.add('go');
-    if (!reduced) {
-      const page = document.getElementById('page');
-      page.classList.add('shake');
-      setTimeout(() => page.classList.remove('shake'), 500);
-    }
-    const crater = document.createElement('div');
-    crater.className = 'crater';
-    crater.style.left = (cx + scrollX) + 'px';
-    crater.style.top  = (cy + scrollY) + 'px';
-    document.body.appendChild(crater);
-    setTimeout(() => crater.remove(), 9500);
-  }
-
-  /* paw prints padding away from where he vanished */
-  function pawTrail(cx, cy) {
-    const ang = Math.random() * Math.PI * 2;
-    const steps = 6 + (Math.random() * 3 | 0);
-    for (let i = 1; i <= steps; i++) {
-      setTimeout(() => {
-        const side = (i % 2 ? 1 : -1) * 9;
-        const x = cx + Math.cos(ang) * i * 36 + Math.cos(ang + Math.PI / 2) * side;
-        const y = cy + Math.sin(ang) * i * 36 + Math.sin(ang + Math.PI / 2) * side;
-        if (x < 20 || x > innerWidth - 20 || y < 20 || y > innerHeight - 20) return;
-        const paw = document.createElement('div');
-        paw.className = 'paw';
-        paw.style.left = (x + scrollX - 13) + 'px';
-        paw.style.top  = (y + scrollY - 15) + 'px';
-        paw.style.transform = `rotate(${(ang * 180 / Math.PI + 90).toFixed(1)}deg)`;
-        document.body.appendChild(paw);
-        setTimeout(() => paw.remove(), 10500);
-      }, i * 230);
-    }
-  }
-
-  let flying = false;
-  function hobbesFlight() {
-    if (hobbes.dataset.missing || reduced || document.hidden || flying) return;
-    flying = true;
-    /* every jump is different: side, entry height, arc, distance, speed */
-    const fromLeft = Math.random() < 0.35;
-    hobbesX.style.right = fromLeft ? 'auto' : '-240px';
-    hobbesX.style.left  = fromLeft ? '-240px' : 'auto';
-    const dist = 30 + Math.random() * 42;
-    hobbesX.style.setProperty('--flip', fromLeft ? -1 : 1);
-    hobbesX.style.setProperty('--fly-dist', fromLeft ? `calc(${dist.toFixed(1)}vw + 240px)` : `calc(-${dist.toFixed(1)}vw - 240px)`);
-    hobbesX.style.setProperty('--fly-top',  (4 + Math.random() * 20).toFixed(1) + 'vh');
-    hobbesX.style.setProperty('--fly-apex', '-' + (6 + Math.random() * 10).toFixed(1) + 'vh');
-    hobbesX.style.setProperty('--fly-drop', (26 + Math.random() * 32).toFixed(1) + 'vh');
-    hobbesX.style.setProperty('--fly-dur',  (1.25 + Math.random() * 0.5).toFixed(2) + 's');
-    document.body.classList.add('flying');
-    hobbesX.addEventListener('animationend', function onEnd(e) {
-      if (e.animationName !== 'flyx') return;
-      hobbesX.removeEventListener('animationend', onEnd);
-      const r = hobbes.getBoundingClientRect();
-      const cx = r.left + r.width / 2, cy = r.top + r.height * 0.8;
-      document.body.classList.remove('flying');   /* hides him in the dust */
-      eruptionAt(cx, cy);
-      pawTrail(cx, cy);
-      flying = false;
-    });
-  }
-  /* first appearance shortly after load, then every so often */
-  setTimeout(hobbesFlight, 3500);
-  setInterval(hobbesFlight, 16000);
-
-  /* clicking Calvin makes him kick a little sand too */
-  calvin.addEventListener('pointerdown', e => {
-    const r = calvin.getBoundingClientRect();
-    for (let i = 0; i < 30; i++) grain(r.right - 20, r.bottom - 14, { speed: 5, spread: 1.8 });
+  /* poke the box and the sand kicks up */
+  art.addEventListener('pointerdown', e => {
+    for (let i = 0; i < 55; i++) grain(e.clientX, e.clientY, { speed: 7, spread: 1.6 });
+  });
+  art.addEventListener('pointermove', e => {
+    if (Math.random() < .25) grain(e.clientX, e.clientY, { speed: 2, spread: 2.2, gravity: .1 });
   });
 
-  /* show the setup note only if the character cutouts are missing */
-  setTimeout(() => {
-    if (calvin.dataset.missing && hobbes.dataset.missing) {
-      document.getElementById('cutout-note').classList.add('show');
-    }
-  }, 1200);
-
-  /* occasional gust across the box */
-  if (!reduced) {
-    setInterval(() => {
-      if (document.hidden || Math.random() < 0.5) return;
-      const y = Math.random() * innerHeight;
-      for (let i = 0; i < 6; i++) {
-        grain(-10, y + Math.random() * 40, { angle: 0, spread: .4, speed: 5, gravity: 0.02 });
+  /* a node brushed = a puff of sand off its edge */
+  document.querySelectorAll('.node').forEach(n => {
+    n.addEventListener('pointerenter', () => {
+      const r = n.getBoundingClientRect();
+      for (let i = 0; i < 7; i++) {
+        grain(r.left + Math.random() * r.width, r.bottom - 4,
+              { speed: 2.6, spread: 2.6, gravity: .12 });
       }
-    }, 2600);
-  }
-
-  /* ---------- story beats tied to scroll ----------
-     scrolling to "Fresh tracks" summons a cannonball; reaching the
-     cards the first time sends a dust devil through them */
-  let lastBeatFlight = -Infinity, lastBeatTornado = -Infinity;
-  const io = new IntersectionObserver(entries => {
-    for (const e of entries) {
-      if (!e.isIntersecting) continue;
-      const now = performance.now();
-      if (e.target.id === 'latest' && now - lastBeatFlight > 30000) {
-        lastBeatFlight = now;
-        setTimeout(hobbesFlight, 600);
-      }
-      if (e.target.id === 'box' && now - lastBeatTornado > 60000) {
-        lastBeatTornado = now;
-        startTornado(innerHeight * 0.5);
-      }
-    }
-  }, { threshold: 0.4 });
-  io.observe(document.getElementById('latest'));
-  io.observe(document.getElementById('box'));
-
-  /* force the big moments for demos/testing: ?jump  ?tornado */
-  const q = new URLSearchParams(location.search);
-  if (q.has('jump'))    setTimeout(hobbesFlight, 800);
-  if (q.has('tornado')) setTimeout(() => startTornado(innerHeight * 0.5), 800);
+    });
+  });
 })();
 </script>
 </body>
