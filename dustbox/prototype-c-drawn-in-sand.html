@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dustbox — Prototype C · Scrawled in Sand</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Rock+Salt&family=Patrick+Hand&family=Caveat:wght@600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --sand:     #e3cda2;
+    --sand-hi:  #f2e3c2;
+    --sand-lo:  #c9ad79;
+    --carve:    #8a6a41;
+    --carve-dk: #6b5232;
+    --ink:      #4a3722;
+    --red:      #a83a2c;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    color: var(--ink);
+    font-family: "Patrick Hand", "Comic Sans MS", cursive;
+    font-size: 20px;
+    line-height: 1.5;
+    overflow-x: hidden;
+    /* the sand: dune shading + fine grain noise */
+    background-color: var(--sand);
+    background-image:
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3'/%3E%3CfeColorMatrix values='0 0 0 0 0.45  0 0 0 0 0.35  0 0 0 0 0.2  0 0 0 0.14 0'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E"),
+      radial-gradient(120vmax 60vmax at 15% -10%, rgba(242,227,194,.8), transparent 60%),
+      radial-gradient(100vmax 55vmax at 90% 35%,  rgba(201,173,121,.5), transparent 55%),
+      radial-gradient(90vmax 50vmax  at 30% 80%,  rgba(242,227,194,.5), transparent 60%),
+      radial-gradient(110vmax 60vmax at 75% 110%, rgba(185,153,104,.45), transparent 60%);
+    /* a twig for a cursor — you're holding the stick */
+    cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='28'%3E%3Cpath d='M4 24 C10 16 16 10 25 3 M25 3 l-4 1 M25 3 l-1 4' stroke='%235a4327' stroke-width='2.6' fill='none' stroke-linecap='round'/%3E%3C/svg%3E") 4 24, auto;
+  }
+
+  /* wind-ripple lines, very faint, across the whole surface */
+  body::before {
+    content: "";
+    position: fixed; inset: -10%;
+    background: repeating-linear-gradient(168deg,
+      rgba(107,82,50,.05) 0 2px, transparent 2px 34px, rgba(255,255,255,.05) 34px 36px, transparent 36px 72px);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* the stick-drawing + kicked-sand canvases */
+  #grooves, #kick {
+    position: fixed; inset: 0;
+    pointer-events: none;
+  }
+  #grooves { z-index: 1; }
+  #kick    { z-index: 50; }
+
+  main, header, footer { position: relative; z-index: 2; }
+
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 22px clamp(20px, 5vw, 64px);
+  }
+  .wordmark {
+    font-family: "Rock Salt", cursive;
+    font-size: 20px; letter-spacing: 2px;
+    color: var(--carve-dk);
+    text-decoration: none;
+  }
+  nav a {
+    color: var(--carve);
+    text-decoration: none;
+    font-size: 20px;
+    margin-left: clamp(10px, 2.2vw, 26px);
+  }
+  nav a:hover { color: var(--red); }
+
+  /* ------------ hero: carved into the sand ------------ */
+  .hero {
+    text-align: center;
+    padding: clamp(50px, 11vh, 120px) 20px 30px;
+  }
+  .carved {
+    font-family: "Rock Salt", cursive;
+    color: var(--carve);
+    /* engraved: bright lip below, shadow pressed in above */
+    text-shadow:
+      0 2px 1px rgba(255,248,230,.85),
+      0 3px 2px rgba(255,248,230,.4),
+      0 -2px 3px rgba(74,55,34,.5);
+    letter-spacing: .05em;
+  }
+  .hero h1 { font-size: clamp(46px, 10vw, 120px); }
+  .hero .tagline {
+    margin-top: 26px;
+    font-size: clamp(21px, 2.7vw, 29px);
+    color: var(--carve-dk);
+  }
+  .hero .note {
+    margin-top: 14px;
+    font-family: "Caveat", cursive;
+    font-size: clamp(21px, 2.4vw, 26px);
+    color: var(--carve);
+    transform: rotate(-1.2deg);
+    display: inline-block;
+  }
+  .hero .note b { color: var(--red); font-weight: 700; }
+
+  /* footprints wandering from the hero down the page */
+  .footprints {
+    display: block;
+    margin: 30px auto -10px;
+    opacity: .5;
+  }
+
+  /* ------------ sections ------------ */
+  section { max-width: 1060px; margin: 0 auto; padding: 70px 24px 0; }
+
+  .scrawl-head {
+    display: inline-block;
+    font-family: "Rock Salt", cursive;
+    font-size: clamp(24px, 3.4vw, 34px);
+    margin-bottom: 34px;
+    transform: rotate(-.8deg);
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+    gap: 30px;
+  }
+
+  /* a card = a patch of sand smoothed flat by hand, message carved in */
+  .card {
+    position: relative;
+    display: block;
+    color: var(--ink);
+    text-decoration: none;
+    padding: 26px 26px 20px;
+    background:
+      radial-gradient(120% 120% at 30% 20%, rgba(242,227,194,.9), rgba(242,227,194,.35) 70%);
+    border-radius: 48% 52% 55% 45% / 52% 46% 54% 48%;
+    box-shadow:
+      inset 0 2px 6px rgba(255,250,238,.8),
+      inset 0 -3px 8px rgba(107,82,50,.25),
+      0 1px 0 rgba(255,250,238,.5);
+    transition: transform .14s ease;
+  }
+  /* the line you traced around the patch with the stick */
+  .card::after {
+    content: "";
+    position: absolute; inset: 5px;
+    border: 2.5px solid rgba(107,82,50,.4);
+    border-radius: 48% 52% 55% 45% / 52% 46% 54% 48%;
+    pointer-events: none;
+  }
+  .card:nth-child(2n) { transform: rotate(.8deg); }
+  .card:nth-child(3n) { transform: rotate(-.9deg); }
+  .card:hover { transform: translateY(-4px) rotate(0); }
+  .card h3 {
+    font-family: "Rock Salt", cursive;
+    font-size: 21px;
+    color: var(--carve);
+    text-shadow: 0 1.5px 1px rgba(255,248,230,.8), 0 -1.5px 2px rgba(74,55,34,.4);
+    margin-bottom: 8px;
+  }
+  .card p { font-size: 18px; color: var(--carve-dk); }
+  .card .n {
+    position: absolute; top: 14px; right: 22px;
+    font-family: "Caveat", cursive;
+    font-size: 19px; color: rgba(107,82,50,.55);
+  }
+  /* a pebble holding each patch down */
+  .card .pebble {
+    position: absolute;
+    width: 22px; height: 16px;
+    background: radial-gradient(circle at 35% 30%, #b7ab97, #7d715e);
+    border-radius: 50% 46% 52% 48%;
+    box-shadow: 2px 3px 3px rgba(74,55,34,.35);
+    top: -6px; left: 30px;
+  }
+  .card:nth-child(2n) .pebble { left: auto; right: 40px; transform: rotate(30deg); }
+
+  /* ------------ latest ------------ */
+  .latest { list-style: none; max-width: 860px; }
+  .latest li {
+    display: flex; gap: 16px; align-items: baseline;
+    padding: 14px 4px;
+    border-bottom: 2px dotted rgba(107,82,50,.45);
+    font-size: 21px;
+  }
+  .latest .when { font-family: "Caveat", cursive; color: rgba(107,82,50,.6); min-width: 96px; font-size: 20px; }
+  .latest a { color: var(--ink); text-decoration: none; }
+  .latest a:hover { color: var(--red); }
+  .latest .tag {
+    margin-left: auto; white-space: nowrap;
+    font-size: 14px; color: var(--sand-hi);
+    background: var(--carve);
+    border-radius: 9px 4px 10px 5px;
+    padding: 1px 10px;
+  }
+
+  /* your Calvin graphic, printed straight onto the sand —
+     multiply blend melts the white background away */
+  .calvin-corner {
+    position: relative;
+    max-width: 1060px;
+    margin: 40px auto 0;
+    padding: 0 24px;
+    text-align: right;
+  }
+  .calvin-corner img {
+    width: clamp(120px, 20vw, 210px);
+    mix-blend-mode: multiply;
+    opacity: .95;
+    transform: rotate(-2deg);
+  }
+
+  footer {
+    margin-top: 80px;
+    padding: 40px 24px 90px;
+    text-align: center;
+    font-family: "Caveat", cursive;
+    font-size: 24px;
+    color: var(--carve-dk);
+  }
+
+  .proto-switch {
+    position: fixed; left: 14px; bottom: 12px; z-index: 80;
+    font-family: "Patrick Hand", cursive; font-size: 15px;
+    background: var(--sand-hi); border: 2px solid var(--carve-dk);
+    border-radius: 12px 4px 14px 5px;
+    padding: 4px 12px; color: var(--ink); text-decoration: none;
+    opacity: .8;
+  }
+  .proto-switch:hover { opacity: 1; }
+
+  @media (max-width: 640px) { nav a:nth-child(n+3) { display: none; } }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+</style>
+</head>
+<body>
+
+<canvas id="grooves"></canvas>
+<canvas id="kick"></canvas>
+
+<header>
+  <a class="wordmark" href="#">DUSTBOX</a>
+  <nav>
+    <a href="#box">Projects</a>
+    <a href="#box">Writing</a>
+    <a href="#box">Reports</a>
+    <a href="#latest">Latest</a>
+  </nav>
+</header>
+
+<main>
+  <div class="hero">
+    <h1 class="carved">DUSTBOX</h1>
+    <p class="tagline carved">Projects, prototypes, &amp; messages scrawled in the sand.</p>
+    <p class="note">you're holding the stick — <b>drag anywhere</b> to draw, click to kick sand</p>
+
+    <!-- footprints wander off toward the first section -->
+    <svg class="footprints" width="120" height="150" viewBox="0 0 120 150" fill="#8a6a41">
+      <ellipse cx="45" cy="10"  rx="7" ry="11" transform="rotate(12 45 10)"/>
+      <ellipse cx="72" cy="38"  rx="7" ry="11" transform="rotate(-8 72 38)"/>
+      <ellipse cx="48" cy="68"  rx="7" ry="11" transform="rotate(10 48 68)"/>
+      <ellipse cx="74" cy="98"  rx="7" ry="11" transform="rotate(-10 74 98)"/>
+      <ellipse cx="50" cy="128" rx="7" ry="11" transform="rotate(8 50 128)"/>
+    </svg>
+  </div>
+
+  <section id="box">
+    <h2 class="scrawl-head carved">Dug up around here</h2>
+    <div class="grid">
+      <a class="card" href="#"><span class="pebble"></span><span class="n">12 builds</span>
+        <h3>Projects</h3><p>Castles that survived the tide — real, shipped, working.</p></a>
+      <a class="card" href="#"><span class="pebble"></span><span class="n">forever WIP</span>
+        <h3>Prototypes</h3><p>Half-built and proud of it. Poke them, they wiggle.</p></a>
+      <a class="card" href="#"><span class="pebble"></span><span class="n">on stage</span>
+        <h3>Talks &amp; Decks</h3><p>Presentations — show-and-tell for grown-ups.</p></a>
+      <a class="card" href="#"><span class="pebble"></span><span class="n">the deep digs</span>
+        <h3>Thesis &amp; Papers</h3><p>Long-form research, dug all the way down.</p></a>
+      <a class="card" href="#"><span class="pebble"></span><span class="n">fresh scrawls</span>
+        <h3>Blog</h3><p>Notes drawn in the sand before the wind gets them.</p></a>
+      <a class="card" href="#"><span class="pebble"></span><span class="n">signal only</span>
+        <h3>Reports</h3><p>Dispatches for teams &amp; leadership — clear and current.</p></a>
+    </div>
+  </section>
+
+  <section id="latest">
+    <h2 class="scrawl-head carved">Fresh tracks</h2>
+    <ul class="latest">
+      <li><span class="when">this week</span><a href="#">Sample entry — your newest prototype goes here</a><span class="tag">prototype</span></li>
+      <li><span class="when">last month</span><a href="#">Sample entry — a talk you gave, deck attached</a><span class="tag">deck</span></li>
+      <li><span class="when">spring</span><a href="#">Sample entry — quarterly report for leadership</a><span class="tag">report</span></li>
+      <li><span class="when">a while ago</span><a href="#">Sample entry — that blog post you keep meaning to finish</a><span class="tag">blog</span></li>
+    </ul>
+  </section>
+
+  <!-- Drop assets/calvin-sandbox.png in and he's printed right on the
+       sand (multiply blend removes the white box). Hidden if missing. -->
+  <div class="calvin-corner">
+    <img src="assets/calvin-sandbox.png" alt="" onerror="this.parentElement.style.display='none'">
+  </div>
+</main>
+
+<footer>
+  the wind erases everything eventually — write anyway · Dust
+</footer>
+
+<a class="proto-switch" href="index.html">← all prototypes</a>
+
+<script>
+/* ============================================================
+   STICK-IN-THE-SAND ENGINE
+   grooves canvas — dragging carves a groove: a dark furrow with a
+     bright lip, which the "wind" slowly fades away.
+   kick canvas    — clicking kicks a burst of grains around.
+   ============================================================ */
+(function () {
+  const grooves = document.getElementById('grooves');
+  const gctx = grooves.getContext('2d');
+  const kick = document.getElementById('kick');
+  const kctx = kick.getContext('2d');
+  const DPR = Math.min(window.devicePixelRatio || 1, 2);
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  let W, H;
+  function resize() {
+    /* keep the drawing when the window resizes: snapshot + restore */
+    const snap = document.createElement('canvas');
+    snap.width = grooves.width || 1; snap.height = grooves.height || 1;
+    snap.getContext('2d').drawImage(grooves, 0, 0);
+
+    W = Math.floor(innerWidth * DPR); H = Math.floor(innerHeight * DPR);
+    for (const c of [grooves, kick]) {
+      c.width = W; c.height = H;
+      c.style.width = innerWidth + 'px';
+      c.style.height = innerHeight + 'px';
+    }
+    gctx.drawImage(snap, 0, 0);
+  }
+  resize();
+  addEventListener('resize', resize);
+
+  /* ---------- carving grooves ---------- */
+  let prev = null;
+  function carve(x, y) {
+    x *= DPR; y *= DPR;
+    if (prev) {
+      const w = 5 * DPR;
+      /* bright lip first (offset down-right), furrow on top */
+      gctx.lineCap = 'round'; gctx.lineJoin = 'round';
+      gctx.strokeStyle = 'rgba(255,248,228,.75)';
+      gctx.lineWidth = w + 2.5 * DPR;
+      gctx.beginPath(); gctx.moveTo(prev.x + 2*DPR, prev.y + 2.5*DPR); gctx.lineTo(x + 2*DPR, y + 2.5*DPR); gctx.stroke();
+
+      gctx.strokeStyle = 'rgba(107,82,50,.6)';
+      gctx.lineWidth = w;
+      gctx.beginPath(); gctx.moveTo(prev.x, prev.y); gctx.lineTo(x, y); gctx.stroke();
+
+      /* crumbs thrown off the stick */
+      if (Math.random() < 0.5) grain(x / DPR, y / DPR, { speed: 1.6, spread: 3, gravity: 0.08 });
+    }
+    prev = { x, y };
+  }
+  addEventListener('pointermove', e => { if (e.buttons === 1) carve(e.clientX, e.clientY); });
+  addEventListener('pointerdown', e => { prev = null; carve(e.clientX, e.clientY); });
+  addEventListener('pointerup',   () => { prev = null; });
+
+  /* the wind: grooves fade out over ~40s */
+  if (!reduced) {
+    setInterval(() => {
+      if (document.hidden) return;
+      gctx.globalCompositeOperation = 'destination-out';
+      gctx.fillStyle = 'rgba(0,0,0,0.03)';
+      gctx.fillRect(0, 0, W, H);
+      gctx.globalCompositeOperation = 'source-over';
+    }, 1200);
+  }
+
+  /* ---------- kicked sand ---------- */
+  const TONES = ['#e3cda2', '#c9ad79', '#f2e3c2', '#b3925f', '#d5bd90'];
+  const SPECK = ['#8a6a41', '#6b5232'];
+  const grains = [];
+  function grain(x, y, o = {}) {
+    if (grains.length > 800) grains.splice(0, 30);
+    const a = (o.angle ?? -Math.PI / 2) + (Math.random() - .5) * (o.spread ?? 1.4);
+    const sp = (o.speed ?? 7) * (0.35 + Math.random() * 0.9) * DPR;
+    grains.push({
+      x: x * DPR, y: y * DPR,
+      vx: Math.cos(a) * sp, vy: Math.sin(a) * sp,
+      r: (0.9 + Math.random() * 2) * DPR,
+      rot: Math.random() * Math.PI, vr: (Math.random() - .5) * .3,
+      life: 1, decay: 0.008 + Math.random() * 0.012,
+      g: (o.gravity ?? 0.17) * DPR,
+      color: Math.random() < .12 ? SPECK[(Math.random()*SPECK.length)|0] : TONES[(Math.random()*TONES.length)|0],
+    });
+  }
+  addEventListener('pointerdown', e => {
+    for (let i = 0; i < 60; i++) grain(e.clientX, e.clientY, { speed: 8, spread: 1.6 });
+  });
+
+  let last = performance.now();
+  function frame(now) {
+    const dt = Math.min((now - last) / 16.7, 3);
+    last = now;
+    kctx.clearRect(0, 0, W, H);
+    for (let i = grains.length - 1; i >= 0; i--) {
+      const p = grains[i];
+      p.vy += p.g * dt; p.vx *= .985; p.vy *= .992;
+      p.x += p.vx * dt; p.y += p.vy * dt; p.rot += p.vr * dt;
+      p.life -= p.decay * dt;
+      if (p.life <= 0 || p.y > H + 20) { grains.splice(i, 1); continue; }
+      kctx.save();
+      kctx.globalAlpha = Math.min(1, p.life * 1.6);
+      kctx.translate(p.x, p.y); kctx.rotate(p.rot);
+      kctx.fillStyle = p.color;
+      kctx.fillRect(-p.r, -p.r * .7, p.r * 2, p.r * 1.4);
+      kctx.restore();
+    }
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+
+  /* a gust now and then rolls a few grains across the page */
+  if (!reduced) {
+    setInterval(() => {
+      if (document.hidden || Math.random() < 0.5) return;
+      const y = Math.random() * innerHeight;
+      for (let i = 0; i < 6; i++) {
+        grain(-10, y + Math.random() * 40, { angle: 0, spread: .4, speed: 5, gravity: 0.02 });
+      }
+    }, 2600);
+  }
+})();
+</script>
+</body>
+</html>

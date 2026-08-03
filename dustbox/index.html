@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dustbox — pick a prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Rock+Salt&family=Patrick+Hand&family=Caveat:wght@600&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #faf7f0;
+    color: #2a2118;
+    font-family: "Patrick Hand", cursive;
+    font-size: 20px;
+    min-height: 100vh;
+    display: grid;
+    place-items: center;
+    padding: 40px 20px;
+  }
+  .wrap { max-width: 900px; text-align: center; }
+  h1 { font-family: "Rock Salt", cursive; font-size: clamp(34px, 6vw, 56px); }
+  .sub { margin: 14px 0 40px; color: #5b4c3b; font-size: 22px; }
+  .row { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 24px; text-align: left; }
+  a.p {
+    display: block;
+    text-decoration: none;
+    color: #2a2118;
+    border: 2.5px solid #2a2118;
+    border-radius: 255px 15px 225px 15px / 15px 225px 15px 255px;
+    padding: 22px;
+    background: #fffdf8;
+    box-shadow: 4px 5px 0 rgba(192,162,113,.5);
+    transition: transform .12s ease, box-shadow .12s ease;
+  }
+  a.p:hover { transform: translateY(-4px); box-shadow: 6px 9px 0 rgba(192,162,113,.65); }
+  a.p .k { font-family: "Caveat", cursive; font-size: 20px; color: #b23a2f; }
+  a.p h2 { font-size: 26px; margin: 2px 0 6px; }
+  a.p p { font-size: 17px; color: #5b4c3b; }
+  a.p.b { background: #18222f; color: #d8cbb2; border-color: #d8cbb2; box-shadow: 4px 5px 0 rgba(24,34,47,.35); }
+  a.p.b p { color: #a99a80; }
+  a.p.b .k { color: #e9b44c; }
+  a.p.c { background: #e3cda2; box-shadow: 4px 5px 0 rgba(138,106,65,.4); }
+  a.p.c p { color: #6b5232; }
+  .foot { margin-top: 44px; font-family: "Caveat", cursive; font-size: 21px; color: #5b4c3b; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>DUSTBOX</h1>
+    <p class="sub">three prototypes — jump into whichever box you like</p>
+    <div class="row">
+      <a class="p a" href="prototype-a-sandbox-hero.html">
+        <span class="k">Prototype A</span>
+        <h2>Sandbox Hero</h2>
+        <p>The red sandbox, drawn right into the page. Click the sand, hit "Jump in!", and it erupts. Calvin sits beside the box.</p>
+      </a>
+      <a class="p b" href="prototype-b-dust-on-glass.html">
+        <span class="k">Prototype B</span>
+        <h2>Dust on Glass</h2>
+        <p>A window at night. The title is finger-wiped out of a real dust layer — and your cursor wipes more of it away.</p>
+      </a>
+      <a class="p c" href="prototype-c-drawn-in-sand.html">
+        <span class="k">Prototype C</span>
+        <h2>Scrawled in Sand</h2>
+        <p>The whole page is the sand. You're holding the stick — drag to draw grooves, click to kick sand, the wind erases it all.</p>
+      </a>
+    </div>
+    <p class="foot">no build step, no dependencies — each file stands alone. mix &amp; match freely.</p>
+  </div>
+</body>
+</html>

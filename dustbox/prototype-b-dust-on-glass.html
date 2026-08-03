@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dustbox — Prototype B · Dust on Glass</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Rock+Salt&family=Patrick+Hand&family=Caveat:wght@600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --night:   #101722;
+    --night-2: #18222f;
+    --glass:   #1d2836;
+    --dust:    #d8cbb2;
+    --dust-dim:#a99a80;
+    --amber:   #e9b44c;
+    --red:     #c9564a;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--night);
+    color: var(--dust);
+    font-family: "Patrick Hand", "Comic Sans MS", cursive;
+    font-size: 20px;
+    line-height: 1.5;
+    overflow-x: hidden;
+  }
+
+  .sr-only {
+    position: absolute; width: 1px; height: 1px;
+    clip: rect(0 0 0 0); overflow: hidden;
+  }
+
+  /* =================== THE WINDOW (hero) =================== */
+  .window {
+    position: relative;
+    height: 100svh;
+    min-height: 560px;
+    overflow: hidden;
+    /* night outside the glass */
+    background:
+      radial-gradient(1.5px 1.5px at 18% 22%, rgba(255,255,255,.7), transparent 60%),
+      radial-gradient(1.5px 1.5px at 71% 12%, rgba(255,255,255,.6), transparent 60%),
+      radial-gradient(2px 2px   at 84% 30%, rgba(255,255,255,.5), transparent 60%),
+      radial-gradient(1.5px 1.5px at 39% 9%,  rgba(255,255,255,.5), transparent 60%),
+      radial-gradient(1.5px 1.5px at 55% 26%, rgba(255,255,255,.35), transparent 60%),
+      /* warm windows of the building across the street */
+      radial-gradient(26px 14px at 12% 78%, rgba(233,180,76,.20), transparent 70%),
+      radial-gradient(22px 12px at 22% 84%, rgba(233,180,76,.14), transparent 70%),
+      radial-gradient(30px 16px at 78% 82%, rgba(233,180,76,.16), transparent 70%),
+      radial-gradient(20px 12px at 88% 74%, rgba(233,180,76,.12), transparent 70%),
+      /* moon */
+      radial-gradient(70px 70px at 82% 16%, rgba(240,238,226,.55), transparent 70%),
+      linear-gradient(180deg, #0b1119 0%, #101722 45%, #1a2431 100%);
+  }
+
+  /* faint diagonal reflection streaks on the glass */
+  .window::after {
+    content: "";
+    position: absolute; inset: 0;
+    background: linear-gradient(115deg,
+      transparent 28%, rgba(255,255,255,.045) 33%, transparent 39%,
+      transparent 55%, rgba(255,255,255,.03) 61%, transparent 66%);
+    pointer-events: none;
+    z-index: 3;
+  }
+
+  /* the dust layer you wipe */
+  #dust {
+    position: absolute; inset: 0;
+    z-index: 2;
+    cursor: crosshair;
+    touch-action: none;
+  }
+
+  /* falling motes / floaters */
+  #motes {
+    position: fixed; inset: 0;
+    z-index: 40;
+    pointer-events: none;
+  }
+
+  /* content faintly visible BEHIND the dust — reads as "behind dusty glass" */
+  .behind {
+    position: absolute;
+    left: 0; right: 0;
+    top: 58%;
+    text-align: center;
+    z-index: 1;
+    color: var(--dust-dim);
+    pointer-events: none;
+  }
+  .behind .tagline { font-size: clamp(20px, 2.6vw, 27px); }
+  .behind .down {
+    display: inline-block;
+    margin-top: 26px;
+    font-family: "Caveat", cursive;
+    font-size: 24px;
+    animation: bob 2.4s ease-in-out infinite;
+  }
+  @keyframes bob { 50% { transform: translateY(7px); } }
+
+  header {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    z-index: 10;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 20px clamp(20px, 5vw, 60px);
+  }
+  .wordmark {
+    font-family: "Rock Salt", cursive;
+    font-size: 20px;
+    letter-spacing: 2px;
+    color: var(--dust);
+    text-decoration: none;
+    opacity: .9;
+  }
+  nav a {
+    color: var(--dust-dim);
+    text-decoration: none;
+    font-size: 19px;
+    margin-left: clamp(10px, 2.2vw, 26px);
+  }
+  nav a:hover { color: var(--amber); }
+
+  /* windowsill at the bottom of the hero */
+  .sill {
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    height: 26px;
+    background: linear-gradient(180deg, #2b333e, #1a2029);
+    border-top: 2px solid #3a4450;
+    z-index: 4;
+  }
+
+  /* slot for a transparent-background Calvin PNG "sitting on the sill" */
+  .sill-slot {
+    position: absolute;
+    right: clamp(12px, 6vw, 90px);
+    bottom: 22px;
+    width: clamp(90px, 13vw, 150px);
+    z-index: 5;
+    pointer-events: none;
+    filter: drop-shadow(0 4px 8px rgba(0,0,0,.5)) brightness(.92);
+  }
+  .sill-slot img { width: 100%; display: block; }
+
+  /* =================== BELOW THE WINDOW =================== */
+  main { position: relative; z-index: 5; }
+  section {
+    max-width: 1040px;
+    margin: 0 auto;
+    padding: 80px 24px 10px;
+  }
+
+  .scrawl-head {
+    font-family: "Caveat", cursive;
+    font-size: clamp(34px, 4.4vw, 48px);
+    font-weight: 700;
+    color: var(--dust);
+    /* the soft halo of letters drawn in dust */
+    text-shadow: 0 0 14px rgba(216,203,178,.35), 0 0 2px rgba(216,203,178,.6);
+    margin-bottom: 28px;
+    transform: rotate(-1deg);
+    display: inline-block;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 22px;
+  }
+
+  .card {
+    position: relative;
+    display: block;
+    text-decoration: none;
+    color: var(--dust);
+    background: linear-gradient(160deg, rgba(255,255,255,.055), rgba(255,255,255,.02));
+    border: 1px solid rgba(216,203,178,.22);
+    border-radius: 14px;
+    padding: 24px 24px 20px;
+    backdrop-filter: blur(3px);
+    overflow: hidden;
+    transition: transform .14s ease, border-color .14s ease, background .14s ease;
+  }
+  /* dusty film on each pane */
+  .card::before {
+    content: "";
+    position: absolute; inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 0.85  0 0 0 0 0.8  0 0 0 0 0.7  0 0 0 0.06 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+    pointer-events: none;
+  }
+  .card:hover {
+    transform: translateY(-4px);
+    border-color: rgba(233,180,76,.55);
+    background: linear-gradient(160deg, rgba(255,255,255,.085), rgba(255,255,255,.03));
+  }
+  .card h3 {
+    font-family: "Caveat", cursive;
+    font-size: 30px;
+    color: var(--amber);
+    text-shadow: 0 0 12px rgba(233,180,76,.3);
+    margin-bottom: 4px;
+  }
+  .card p { color: var(--dust-dim); font-size: 18px; }
+  .card .n {
+    position: absolute; top: 16px; right: 18px;
+    font-family: "Caveat", cursive;
+    font-size: 19px; color: rgba(216,203,178,.45);
+  }
+
+  .latest { list-style: none; }
+  .latest li {
+    display: flex; gap: 16px; align-items: baseline;
+    padding: 14px 4px;
+    border-bottom: 1px dashed rgba(216,203,178,.28);
+    font-size: 20px;
+  }
+  .latest .when { font-family: "Caveat", cursive; color: rgba(216,203,178,.5); min-width: 96px; }
+  .latest a { color: var(--dust); text-decoration: none; }
+  .latest a:hover { color: var(--amber); }
+  .latest .tag {
+    margin-left: auto; white-space: nowrap;
+    font-size: 14px; color: var(--night);
+    background: var(--dust-dim);
+    border-radius: 8px; padding: 1px 10px;
+  }
+
+  footer {
+    margin-top: 90px;
+    padding: 40px 24px 60px;
+    text-align: center;
+    color: rgba(216,203,178,.55);
+    font-family: "Caveat", cursive;
+    font-size: 23px;
+  }
+
+  .proto-switch {
+    position: fixed; left: 14px; bottom: 12px; z-index: 80;
+    font-family: "Patrick Hand", cursive; font-size: 15px;
+    background: rgba(29,40,54,.9); border: 1px solid rgba(216,203,178,.4);
+    border-radius: 10px;
+    padding: 4px 12px; color: var(--dust); text-decoration: none;
+    opacity: .8;
+  }
+  .proto-switch:hover { opacity: 1; }
+
+  @media (max-width: 640px) { nav a:nth-child(n+3) { display: none; } }
+  @media (prefers-reduced-motion: reduce) {
+    .behind .down { animation: none; }
+    html { scroll-behavior: auto; }
+  }
+</style>
+</head>
+<body>
+
+<canvas id="motes"></canvas>
+
+<div class="window" id="window">
+  <header>
+    <a class="wordmark" href="#">DUSTBOX</a>
+    <nav>
+      <a href="#box">Projects</a>
+      <a href="#box">Writing</a>
+      <a href="#box">Reports</a>
+      <a href="#latest">Latest</a>
+    </nav>
+  </header>
+
+  <h1 class="sr-only">Dustbox — projects, prototypes, and messages scrawled in the dust</h1>
+
+  <div class="behind">
+    <p class="tagline">Projects, prototypes, &amp; messages left in the dust.</p>
+    <span class="down">scroll down for the good stuff ↓</span>
+  </div>
+
+  <!-- the dust film: title + doodles are pre-wiped into it, and
+       your cursor wipes more of it away -->
+  <canvas id="dust"></canvas>
+
+  <div class="sill"></div>
+
+  <!-- Drop a TRANSPARENT-background PNG (e.g. Calvin peeking) into
+       dustbox/assets/calvin-sill.png and he'll sit on the windowsill.
+       Hidden automatically if the file isn't there. -->
+  <div class="sill-slot">
+    <img src="assets/calvin-sill.png" alt="" onerror="this.parentElement.style.display='none'">
+  </div>
+</div>
+
+<main>
+  <section id="box">
+    <h2 class="scrawl-head">Things written in the dust</h2>
+    <div class="grid">
+      <a class="card" href="#"><span class="n">12 builds</span>
+        <h3>Projects</h3><p>Real, working things I've shipped and still stand behind.</p></a>
+      <a class="card" href="#"><span class="n">forever WIP</span>
+        <h3>Prototypes</h3><p>Sketches with a pulse. Half-built and happy about it.</p></a>
+      <a class="card" href="#"><span class="n">on stage</span>
+        <h3>Talks &amp; Decks</h3><p>Presentations — show-and-tell for grown-ups.</p></a>
+      <a class="card" href="#"><span class="n">the deep digs</span>
+        <h3>Thesis &amp; Papers</h3><p>Long-form research, written down properly.</p></a>
+      <a class="card" href="#"><span class="n">fresh scrawls</span>
+        <h3>Blog</h3><p>Notes traced on the glass — ideas, experiments, lessons.</p></a>
+      <a class="card" href="#"><span class="n">signal only</span>
+        <h3>Reports</h3><p>Dispatches for teams &amp; leadership — clear and current.</p></a>
+    </div>
+  </section>
+
+  <section id="latest">
+    <h2 class="scrawl-head">Freshly wiped</h2>
+    <ul class="latest">
+      <li><span class="when">this week</span><a href="#">Sample entry — your newest prototype goes here</a><span class="tag">prototype</span></li>
+      <li><span class="when">last month</span><a href="#">Sample entry — a talk you gave, deck attached</a><span class="tag">deck</span></li>
+      <li><span class="when">spring</span><a href="#">Sample entry — quarterly report for leadership</a><span class="tag">report</span></li>
+      <li><span class="when">a while ago</span><a href="#">Sample entry — that blog post you keep meaning to finish</a><span class="tag">blog</span></li>
+    </ul>
+  </section>
+</main>
+
+<footer>
+  wash me — no, wait, don't · Dust
+</footer>
+
+<a class="proto-switch" href="index.html">← all prototypes</a>
+
+<script>
+/* ============================================================
+   DUST-ON-GLASS ENGINE
+   1. Paint a film of dust over the hero (thousands of grains).
+   2. Pre-wipe "DUSTBOX" + doodles out of it with destination-out,
+      so the title is literally a message someone drew in the dust.
+   3. The pointer wipes more away; dust slowly re-settles.
+   4. Wiping shakes loose motes that drift down (second canvas).
+   ============================================================ */
+(function () {
+  const hero  = document.getElementById('window');
+  const dust  = document.getElementById('dust');
+  const dctx  = dust.getContext('2d');
+  const motes = document.getElementById('motes');
+  const mctx  = motes.getContext('2d');
+  const DPR   = Math.min(window.devicePixelRatio || 1, 2);
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* ---------- the dust film ---------- */
+  function paintDust() {
+    const w = dust.width, h = dust.height;
+    dctx.globalCompositeOperation = 'source-over';
+    dctx.clearRect(0, 0, w, h);
+
+    /* base haze */
+    dctx.fillStyle = 'rgba(196,186,166,0.16)';
+    dctx.fillRect(0, 0, w, h);
+    /* dust gathers thicker toward the bottom corners */
+    const g = dctx.createLinearGradient(0, h * .35, 0, h);
+    g.addColorStop(0, 'rgba(196,186,166,0)');
+    g.addColorStop(1, 'rgba(196,186,166,0.18)');
+    dctx.fillStyle = g;
+    dctx.fillRect(0, 0, w, h);
+
+    /* grains */
+    const n = Math.floor((w * h) / 300);
+    for (let i = 0; i < n; i++) {
+      const x = Math.random() * w;
+      const y = Math.random() * h * (0.6 + Math.random() * 0.4); /* denser lower */
+      const r = (Math.random() * 1.6 + 0.4) * DPR;
+      dctx.fillStyle = `rgba(216,203,178,${0.05 + Math.random() * 0.22})`;
+      dctx.fillRect(x, y, r, r);
+    }
+  }
+
+  /* ---------- pre-wiped writing ---------- */
+  function fingerText(text, font, x, y, passes = 3) {
+    dctx.globalCompositeOperation = 'destination-out';
+    dctx.textAlign = 'center';
+    dctx.font = font;
+    for (let i = 0; i < passes; i++) {
+      dctx.globalAlpha = 0.55;
+      dctx.fillText(text, x + (Math.random() - .5) * 3 * DPR, y + (Math.random() - .5) * 3 * DPR);
+    }
+    dctx.globalAlpha = 1;
+    dctx.globalCompositeOperation = 'source-over';
+  }
+
+  function fingerStroke(points, width) {
+    dctx.globalCompositeOperation = 'destination-out';
+    dctx.strokeStyle = 'rgba(0,0,0,0.8)';
+    dctx.lineWidth = width;
+    dctx.lineCap = 'round';
+    dctx.lineJoin = 'round';
+    dctx.beginPath();
+    points.forEach(([x, y], i) => i ? dctx.lineTo(x, y) : dctx.moveTo(x, y));
+    dctx.stroke();
+    dctx.globalCompositeOperation = 'source-over';
+  }
+
+  function writeInDust() {
+    const w = dust.width, h = dust.height;
+    const cx = w / 2;
+    const titleSize = Math.min(w * 0.115, 150 * DPR);
+    fingerText('DUSTBOX', `${titleSize}px "Rock Salt", cursive`, cx, h * 0.34, 4);
+
+    /* squiggle underline */
+    const uy = h * 0.40, uw = Math.min(w * 0.44, titleSize * 4.4);
+    const pts = [];
+    for (let i = 0; i <= 24; i++) {
+      const t = i / 24;
+      pts.push([cx - uw / 2 + uw * t, uy + Math.sin(t * Math.PI * 3) * 6 * DPR]);
+    }
+    fingerStroke(pts, 9 * DPR);
+
+    fingerText('( wipe the glass )', `${Math.max(26 * DPR, w * 0.022)}px "Caveat", cursive`, cx, h * 0.47, 2);
+
+    /* a little smiley, finger-drawn, off to the side */
+    const sx = w * 0.82, sy = h * 0.55, r = Math.min(w, h) * 0.045;
+    dctx.globalCompositeOperation = 'destination-out';
+    dctx.lineWidth = 7 * DPR; dctx.lineCap = 'round';
+    dctx.beginPath(); dctx.arc(sx, sy, r, 0, Math.PI * 2); dctx.stroke();
+    dctx.beginPath(); dctx.arc(sx, sy + r * .1, r * .55, 0.25 * Math.PI, 0.75 * Math.PI); dctx.stroke();
+    dctx.beginPath(); dctx.arc(sx - r * .35, sy - r * .25, 2.4 * DPR, 0, Math.PI * 2); dctx.stroke();
+    dctx.beginPath(); dctx.arc(sx + r * .35, sy - r * .25, 2.4 * DPR, 0, Math.PI * 2); dctx.stroke();
+    dctx.globalCompositeOperation = 'source-over';
+  }
+
+  function layoutDust() {
+    const r = hero.getBoundingClientRect();
+    dust.width  = Math.floor(r.width * DPR);
+    dust.height = Math.floor(r.height * DPR);
+    paintDust();
+    /* Rock Salt needs to be loaded before we stamp it */
+    document.fonts.ready.then(writeInDust);
+  }
+
+  /* ---------- wiping ---------- */
+  let prev = null;
+  function wipeAt(x, y) {
+    const b = 34 * DPR;
+    dctx.globalCompositeOperation = 'destination-out';
+    const steps = prev ? Math.max(1, Math.hypot(x - prev.x, y - prev.y) / (b * 0.4)) : 1;
+    for (let i = 0; i < steps; i++) {
+      const t = i / steps;
+      const ix = prev ? prev.x + (x - prev.x) * t : x;
+      const iy = prev ? prev.y + (y - prev.y) * t : y;
+      const g = dctx.createRadialGradient(ix, iy, 0, ix, iy, b);
+      g.addColorStop(0, 'rgba(0,0,0,0.5)');
+      g.addColorStop(1, 'rgba(0,0,0,0)');
+      dctx.fillStyle = g;
+      dctx.beginPath(); dctx.arc(ix, iy, b, 0, Math.PI * 2); dctx.fill();
+    }
+    dctx.globalCompositeOperation = 'source-over';
+    prev = { x, y };
+  }
+
+  dust.addEventListener('pointermove', e => {
+    const r = dust.getBoundingClientRect();
+    const x = (e.clientX - r.left) * DPR, y = (e.clientY - r.top) * DPR;
+    wipeAt(x, y);
+    if (Math.random() < 0.5) shakeLoose(e.clientX, e.clientY);
+  });
+  dust.addEventListener('pointerleave', () => { prev = null; });
+  dust.addEventListener('pointerdown', e => {
+    prev = null;
+    for (let i = 0; i < 10; i++) shakeLoose(e.clientX, e.clientY);
+  });
+
+  /* dust slowly resettles */
+  if (!reduced) {
+    setInterval(() => {
+      if (document.hidden) return;
+      const w = dust.width, h = dust.height;
+      for (let i = 0; i < 60; i++) {
+        const x = Math.random() * w, y = Math.random() * h;
+        dctx.fillStyle = `rgba(216,203,178,${0.03 + Math.random() * 0.05})`;
+        dctx.fillRect(x, y, 1.4 * DPR, 1.4 * DPR);
+      }
+    }, 400);
+  }
+
+  /* ---------- motes: floaters + dust knocked loose ---------- */
+  let MW, MH;
+  function sizeMotes() {
+    MW = motes.width  = Math.floor(innerWidth * DPR);
+    MH = motes.height = Math.floor(innerHeight * DPR);
+    motes.style.width = innerWidth + 'px';
+    motes.style.height = innerHeight + 'px';
+  }
+  const ps = [];
+  function shakeLoose(cx, cy) {
+    if (ps.length > 500) ps.splice(0, 20);
+    ps.push({
+      x: cx * DPR + (Math.random() - .5) * 30 * DPR,
+      y: cy * DPR + (Math.random() - .5) * 30 * DPR,
+      vx: (Math.random() - .5) * 0.7 * DPR,
+      vy: (0.4 + Math.random() * 1.1) * DPR,
+      r: (0.6 + Math.random() * 1.6) * DPR,
+      life: 1, decay: 0.004 + Math.random() * 0.008,
+      tw: Math.random() * Math.PI * 2,
+    });
+  }
+  function floater() {
+    if (ps.length > 500) return;
+    ps.push({
+      x: Math.random() * MW, y: Math.random() * MH * 0.9,
+      vx: (Math.random() - .5) * 0.25 * DPR,
+      vy: (0.05 + Math.random() * 0.2) * DPR,
+      r: (0.5 + Math.random() * 1.2) * DPR,
+      life: 1, decay: 0.0015,
+      tw: Math.random() * Math.PI * 2,
+    });
+  }
+  let t = 0, lastF = performance.now();
+  function frame(now) {
+    const dt = Math.min((now - lastF) / 16.7, 3);
+    lastF = now; t += dt;
+    mctx.clearRect(0, 0, MW, MH);
+    if (!reduced && Math.random() < 0.12) floater();
+    for (let i = ps.length - 1; i >= 0; i--) {
+      const p = ps[i];
+      p.x += p.vx * dt + Math.sin(t * 0.02 + p.tw) * 0.15 * DPR;
+      p.y += p.vy * dt;
+      p.life -= p.decay * dt;
+      if (p.life <= 0 || p.y > MH + 10) { ps.splice(i, 1); continue; }
+      mctx.globalAlpha = Math.min(0.7, p.life) * (0.6 + 0.4 * Math.sin(t * 0.05 + p.tw));
+      mctx.fillStyle = '#d8cbb2';
+      mctx.fillRect(p.x, p.y, p.r, p.r);
+    }
+    mctx.globalAlpha = 1;
+    requestAnimationFrame(frame);
+  }
+
+  sizeMotes();
+  layoutDust();
+  requestAnimationFrame(frame);
+  addEventListener('resize', () => { sizeMotes(); layoutDust(); });
+})();
+</script>
+</body>
+</html>
