@@ -13,7 +13,7 @@ is a single HTML file you can copy out and use as a starting point.
 | `prototype-b-dust-on-glass.html` | **Dust on Glass** — a window at night; the site name is a message wiped in the dust | The title is literally erased out of a canvas dust layer; your cursor wipes more away, and the dust slowly resettles |
 | `prototype-c-drawn-in-sand.html` | **Scrawled in Sand** — the entire page is the sand surface | Your cursor is a twig: drag to carve grooves (the wind fades them), click to kick a burst of grains |
 | `prototype-d-the-story.html` | **The Story** — the four-panel strip dissolved into the page as a scroll narrative (plan → cannonball → tornado → build again) | Panels are cropped out of one image with feathered edges and multiply blending — no frames, no strip. Scrolling to each scene fires its moment: grains trickle while Calvin draws, Hobbes' landing erupts real sand with a SPLOPP, panel three grows a live particle tornado, panel four settles into drift. Calvin's sand diagram continues out of the artwork onto the page |
-| `prototype-e-living-sandbox.html` | **The Living Sandbox** — one continuous animated scene: the page IS the inside of the box | A red wooden rim frames the whole viewport, the sand surface is the page (Prototype C's draw/kick interactions included). Calvin's cutout kneels bottom-left gently bobbing while looping stick-doodles draw themselves beside him (grains trickling off the stroke); Hobbes' cutout leaps in over the rim every ~16 s and lands in a full eruption — SPLOPP, screen shake, and a crater that the wind slowly fades |
+| `prototype-e-living-sandbox.html` | **The Living Sandbox** — one continuous animated scene: the page IS the inside of the box | A red wooden rim frames the whole viewport, the sand surface is the page (Prototype C's draw/kick interactions included). Calvin's cutout kneels bottom-left gently bobbing while looping stick-doodles draw themselves beside him (grains trickling off the stroke). Hobbes' cutout leaps in every ~16 s — from either side, with a different entry height, arc, distance and speed each time — and lands in a full eruption: SPLOPP, screen shake, a crater the wind fades, and a trail of paw prints padding away. A dust devil wanders through about once a minute (and the first time you reach the cards), erasing whatever was drawn in its path; scrolling to "Fresh tracks" summons a cannonball. Handwritten story beats from the strip's arc thread the sections together |
 
 All three share the same content skeleton (hero → six category cards → "latest"
 list → footer), so you can graft the sections of one onto the shell of another.
@@ -49,6 +49,11 @@ near the top of it:
   resettle rate (60 grains / 400 ms).
 - **C** — groove width (`5 * DPR`), wind fade (`0.03` alpha / 1.2 s ≈ 40 s
   lifetime), kick burst count (60).
+- **E** — flight cadence (first at 3.5 s, then every 16 s), flight
+  randomization ranges (in `hobbesFlight()`), dust-devil odds (30% roll
+  every 20 s) and speed (`2.4` px/frame-unit), paw-trail length (6–8
+  prints). Append `?jump` or `?tornado` to the URL to force a moment for
+  demos and testing.
 
 All three respect `prefers-reduced-motion` (ambient loops and shakes switch
 off; direct interactions still work).

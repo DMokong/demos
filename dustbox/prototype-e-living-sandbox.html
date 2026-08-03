@@ -208,7 +208,7 @@
   /* outer = horizontal flight, inner = the leap arc, img = spin */
   #hobbes-x {
     position: fixed;
-    top: 8vh;
+    top: var(--fly-top, 8vh);
     right: -240px;
     z-index: 80;
     pointer-events: none;
@@ -219,19 +219,20 @@
     width: clamp(130px, 18vw, 230px);
     filter: drop-shadow(4px 8px 6px rgba(74,55,34,.35));
   }
-  .flying #hobbes-x { display: block; animation: flyx 1.5s linear forwards; }
-  .flying #hobbes-y { animation: flyy 1.5s forwards; }
-  .flying #hobbes   { animation: flyspin 1.5s ease-in forwards; }
-  @keyframes flyx   { to { transform: translateX(calc(-58vw - 240px)); } }
+  .flying #hobbes-x { display: block; animation: flyx var(--fly-dur, 1.5s) linear forwards; }
+  .flying #hobbes-y { animation: flyy var(--fly-dur, 1.5s) forwards; }
+  .flying #hobbes   { animation: flyspin var(--fly-dur, 1.5s) ease-in forwards; }
+  @keyframes flyx   { to { transform: translateX(var(--fly-dist, calc(-58vw - 240px))); } }
   @keyframes flyy   {
     0%   { transform: translateY(0); animation-timing-function: ease-out; }
-    46%  { transform: translateY(-10vh); animation-timing-function: ease-in; }
-    100% { transform: translateY(36vh); }
+    46%  { transform: translateY(var(--fly-apex, -10vh)); animation-timing-function: ease-in; }
+    100% { transform: translateY(var(--fly-drop, 36vh)); }
   }
+  /* --flip mirrors the sprite (and the rotation with it) for left-side entries */
   @keyframes flyspin {
-    0%   { transform: rotate(6deg); }
-    60%  { transform: rotate(-8deg); }
-    100% { transform: rotate(-16deg); opacity: 1; }
+    0%   { transform: scaleX(var(--flip, 1)) rotate(6deg); }
+    60%  { transform: scaleX(var(--flip, 1)) rotate(-8deg); }
+    100% { transform: scaleX(var(--flip, 1)) rotate(-16deg); opacity: 1; }
   }
 
   #splopp {
@@ -276,6 +277,26 @@
     animation: craterfade 9s ease-out forwards;
   }
   @keyframes craterfade { 0% { opacity: 1; } 100% { opacity: 0; } }
+
+  /* paw prints padding away from the crater */
+  .paw {
+    position: absolute;
+    z-index: 1;
+    width: 26px; height: 30px;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='26' height='30'%3E%3Cellipse cx='13' cy='20' rx='8' ry='8.5' fill='rgba(90,65,39,.42)'/%3E%3Ccircle cx='5.5' cy='9' r='3.1' fill='rgba(90,65,39,.42)'/%3E%3Ccircle cx='13' cy='6' r='3.4' fill='rgba(90,65,39,.42)'/%3E%3Ccircle cx='20.5' cy='9' r='3.1' fill='rgba(90,65,39,.42)'/%3E%3C/svg%3E") no-repeat center / contain;
+    pointer-events: none;
+    animation: pawfade 10s ease-out forwards;
+  }
+  @keyframes pawfade { 0%, 55% { opacity: .85; } 100% { opacity: 0; } }
+
+  /* handwritten story beats between sections */
+  .beat {
+    font-family: "Caveat", cursive;
+    font-size: clamp(20px, 2.3vw, 25px);
+    color: var(--carve);
+    transform: rotate(-1deg);
+    margin-bottom: 6px;
+  }
 
   /* the two of them at the bottom of the page */
   #duo-slot {
@@ -450,6 +471,7 @@
   </div>
 
   <section id="box">
+    <p class="beat">the plan never survives contact with the tiger — dig anyway:</p>
     <h2 class="scrawl-head carved">Dug up around here</h2>
     <div class="grid">
       <a class="card" href="#"><span class="n">12 builds</span>
@@ -468,6 +490,7 @@
   </section>
 
   <section id="latest">
+    <p class="beat">— then somebody cannonballs in, and it's all sky and sand —</p>
     <h2 class="scrawl-head carved">Fresh tracks</h2>
     <ul class="latest">
       <li><span class="when">this week</span><a href="#">Sample entry — your newest prototype goes here</a><span class="tag">prototype</span></li>
@@ -481,6 +504,7 @@
   <div id="duo-slot">
     <img id="duo" src="assets/cutout-duo.png" alt=""
          onerror="this.style.display='none'">
+    <p class="beat" style="margin-top:8px">— and tomorrow, we build again.</p>
   </div>
 </main>
 
@@ -557,20 +581,82 @@
       color: Math.random() < .12 ? SPECK[(Math.random()*SPECK.length)|0] : TONES[(Math.random()*TONES.length)|0],
     });
   }
+
+  /* tornado grain: orbits a moving center, spiralling out and up */
+  function spawnVortex(cx, cy) {
+    if (grains.length > 900) grains.splice(0, 30);
+    grains.push({
+      mode: 'vortex',
+      cx: cx * DPR, cy: cy * DPR,
+      ang: Math.random() * Math.PI * 2,
+      rad: (6 + Math.random() * 16) * DPR,
+      va: 0.22 + Math.random() * 0.12,
+      grow: (0.4 + Math.random() * 0.7) * DPR,
+      rise: (0.9 + Math.random() * 1.3) * DPR,
+      lift: 0,
+      r: (0.9 + Math.random() * 2) * DPR,
+      rot: Math.random() * Math.PI, vr: (Math.random() - .5) * .5,
+      life: 1, decay: 0.007 + Math.random() * 0.009,
+      color: Math.random() < .12 ? SPECK[(Math.random()*SPECK.length)|0] : TONES[(Math.random()*TONES.length)|0],
+    });
+  }
+
+  /* ---------- the wandering dust devil ---------- */
+  let tornado = null;
+  function startTornado(yBase) {
+    if (reduced || tornado) return;
+    const fromLeft = Math.random() < 0.5;
+    tornado = {
+      x: fromLeft ? -30 : innerWidth + 30,
+      dir: fromLeft ? 1 : -1,
+      yBase: yBase ?? innerHeight * (0.35 + Math.random() * 0.35),
+      t: 0,
+    };
+  }
+  function tornadoStep(dt) {
+    if (!tornado) return;
+    tornado.t += dt;
+    tornado.x += tornado.dir * 2.4 * dt;
+    const y = tornado.yBase + Math.sin(tornado.t * 0.05) * 50;
+    for (let i = 0; i < 5; i++) spawnVortex(tornado.x, y);
+    /* the wind eats whatever was drawn in its path */
+    gctx.save();
+    gctx.globalCompositeOperation = 'destination-out';
+    const gr = gctx.createRadialGradient(tornado.x * DPR, y * DPR, 0, tornado.x * DPR, y * DPR, 70 * DPR);
+    gr.addColorStop(0, 'rgba(0,0,0,0.16)');
+    gr.addColorStop(1, 'rgba(0,0,0,0)');
+    gctx.fillStyle = gr;
+    gctx.beginPath(); gctx.arc(tornado.x * DPR, y * DPR, 70 * DPR, 0, Math.PI * 2); gctx.fill();
+    gctx.restore();
+    if (tornado.x < -60 || tornado.x > innerWidth + 60) tornado = null;
+  }
+
   let last = performance.now();
   function frame(now) {
     const dt = Math.min((now - last) / 16.7, 3);
     last = now;
     kctx.clearRect(0, 0, W, H);
+    tornadoStep(dt);
     for (let i = grains.length - 1; i >= 0; i--) {
       const p = grains[i];
-      p.vy += p.g * dt; p.vx *= .985; p.vy *= .992;
-      p.x += p.vx * dt; p.y += p.vy * dt; p.rot += p.vr * dt;
+      let px, py;
+      if (p.mode === 'vortex') {
+        p.ang += p.va * dt;
+        p.rad += p.grow * dt;
+        p.lift += p.rise * dt;
+        px = p.cx + Math.cos(p.ang) * p.rad;
+        py = p.cy - p.lift + Math.sin(p.ang) * p.rad * 0.32; /* squashed = seen at an angle */
+      } else {
+        p.vy += p.g * dt; p.vx *= .985; p.vy *= .992;
+        p.x += p.vx * dt; p.y += p.vy * dt;
+        px = p.x; py = p.y;
+      }
+      p.rot += p.vr * dt;
       p.life -= p.decay * dt;
-      if (p.life <= 0 || p.y > H + 20) { grains.splice(i, 1); continue; }
+      if (p.life <= 0 || py > H + 20 || py < -40) { grains.splice(i, 1); continue; }
       kctx.save();
       kctx.globalAlpha = Math.min(1, p.life * 1.6);
-      kctx.translate(p.x, p.y); kctx.rotate(p.rot);
+      kctx.translate(px, py); kctx.rotate(p.rot);
       kctx.fillStyle = p.color;
       kctx.fillRect(-p.r, -p.r * .7, p.r * 2, p.r * 1.4);
       kctx.restore();
@@ -578,6 +664,14 @@
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
+
+  /* a dust devil wanders through every minute or so */
+  if (!reduced) {
+    setInterval(() => {
+      if (document.hidden || Math.random() < 0.7) return;
+      startTornado();
+    }, 20000);
+  }
 
   /* ---------- you, playing: drag = draw, click = kick ---------- */
   let prev = null;
@@ -659,8 +753,42 @@
     setTimeout(() => crater.remove(), 9500);
   }
 
+  /* paw prints padding away from where he vanished */
+  function pawTrail(cx, cy) {
+    const ang = Math.random() * Math.PI * 2;
+    const steps = 6 + (Math.random() * 3 | 0);
+    for (let i = 1; i <= steps; i++) {
+      setTimeout(() => {
+        const side = (i % 2 ? 1 : -1) * 9;
+        const x = cx + Math.cos(ang) * i * 36 + Math.cos(ang + Math.PI / 2) * side;
+        const y = cy + Math.sin(ang) * i * 36 + Math.sin(ang + Math.PI / 2) * side;
+        if (x < 20 || x > innerWidth - 20 || y < 20 || y > innerHeight - 20) return;
+        const paw = document.createElement('div');
+        paw.className = 'paw';
+        paw.style.left = (x + scrollX - 13) + 'px';
+        paw.style.top  = (y + scrollY - 15) + 'px';
+        paw.style.transform = `rotate(${(ang * 180 / Math.PI + 90).toFixed(1)}deg)`;
+        document.body.appendChild(paw);
+        setTimeout(() => paw.remove(), 10500);
+      }, i * 230);
+    }
+  }
+
+  let flying = false;
   function hobbesFlight() {
-    if (hobbes.dataset.missing || reduced || document.hidden) return;
+    if (hobbes.dataset.missing || reduced || document.hidden || flying) return;
+    flying = true;
+    /* every jump is different: side, entry height, arc, distance, speed */
+    const fromLeft = Math.random() < 0.35;
+    hobbesX.style.right = fromLeft ? 'auto' : '-240px';
+    hobbesX.style.left  = fromLeft ? '-240px' : 'auto';
+    const dist = 30 + Math.random() * 42;
+    hobbesX.style.setProperty('--flip', fromLeft ? -1 : 1);
+    hobbesX.style.setProperty('--fly-dist', fromLeft ? `calc(${dist.toFixed(1)}vw + 240px)` : `calc(-${dist.toFixed(1)}vw - 240px)`);
+    hobbesX.style.setProperty('--fly-top',  (4 + Math.random() * 20).toFixed(1) + 'vh');
+    hobbesX.style.setProperty('--fly-apex', '-' + (6 + Math.random() * 10).toFixed(1) + 'vh');
+    hobbesX.style.setProperty('--fly-drop', (26 + Math.random() * 32).toFixed(1) + 'vh');
+    hobbesX.style.setProperty('--fly-dur',  (1.25 + Math.random() * 0.5).toFixed(2) + 's');
     document.body.classList.add('flying');
     hobbesX.addEventListener('animationend', function onEnd(e) {
       if (e.animationName !== 'flyx') return;
@@ -669,6 +797,8 @@
       const cx = r.left + r.width / 2, cy = r.top + r.height * 0.8;
       document.body.classList.remove('flying');   /* hides him in the dust */
       eruptionAt(cx, cy);
+      pawTrail(cx, cy);
+      flying = false;
     });
   }
   /* first appearance shortly after load, then every so often */
@@ -698,6 +828,32 @@
       }
     }, 2600);
   }
+
+  /* ---------- story beats tied to scroll ----------
+     scrolling to "Fresh tracks" summons a cannonball; reaching the
+     cards the first time sends a dust devil through them */
+  let lastBeatFlight = -Infinity, lastBeatTornado = -Infinity;
+  const io = new IntersectionObserver(entries => {
+    for (const e of entries) {
+      if (!e.isIntersecting) continue;
+      const now = performance.now();
+      if (e.target.id === 'latest' && now - lastBeatFlight > 30000) {
+        lastBeatFlight = now;
+        setTimeout(hobbesFlight, 600);
+      }
+      if (e.target.id === 'box' && now - lastBeatTornado > 60000) {
+        lastBeatTornado = now;
+        startTornado(innerHeight * 0.5);
+      }
+    }
+  }, { threshold: 0.4 });
+  io.observe(document.getElementById('latest'));
+  io.observe(document.getElementById('box'));
+
+  /* force the big moments for demos/testing: ?jump  ?tornado */
+  const q = new URLSearchParams(location.search);
+  if (q.has('jump'))    setTimeout(hobbesFlight, 800);
+  if (q.has('tornado')) setTimeout(() => startTornado(innerHeight * 0.5), 800);
 })();
 </script>
 </body>
