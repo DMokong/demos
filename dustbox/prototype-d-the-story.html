@@ -193,7 +193,7 @@
     70%  { opacity: 1; }
     100% { opacity: 0; transform: translate(-50%,-58%) scale(1.05); }
   }
-  body.shake { animation: shake .45s ease-in-out; }
+  #page.shake { animation: shake .45s ease-in-out; }
   @keyframes shake {
     0%,100% { transform: translate(0,0); }
     20% { transform: translate(-5px, 3px) rotate(-.3deg); }
@@ -276,7 +276,7 @@
     nav a:nth-child(n+4) { display: none; }
   }
   @media (prefers-reduced-motion: reduce) {
-    body.shake { animation: none; }
+    #page.shake { animation: none; }
     html { scroll-behavior: auto; }
   }
 </style>
@@ -287,6 +287,7 @@
 <div class="speckle br"></div>
 <canvas id="grains"></canvas>
 
+<div id="page">
 <header>
   <a class="wordmark" href="#">DUSTBOX</a>
   <nav>
@@ -410,6 +411,7 @@
 <footer>
   built with buckets, shovels, and questionable structural engineering — Dust
 </footer>
+</div>
 
 <a class="proto-switch" href="index.html">← all prototypes</a>
 
@@ -549,8 +551,9 @@
       });
     }
     if (!reduced) {
-      document.body.classList.add('shake');
-      setTimeout(() => document.body.classList.remove('shake'), 500);
+      const page = document.getElementById('page');
+      page.classList.add('shake');
+      setTimeout(() => page.classList.remove('shake'), 500);
     }
     splopp.classList.remove('go');
     void splopp.offsetWidth;

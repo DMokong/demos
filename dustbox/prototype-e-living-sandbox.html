@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dustbox — Prototype E · The Living Sandbox</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Rock+Salt&family=Patrick+Hand&family=Caveat:wght@600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --sand:     #e3cda2;
+    --sand-hi:  #f2e3c2;
+    --sand-lo:  #c9ad79;
+    --carve:    #8a6a41;
+    --carve-dk: #6b5232;
+    --ink:      #4a3722;
+    --red:      #b23a2f;
+    --red-dk:   #8a2b22;
+    --rim-t: 30px;   /* far wall  */
+    --rim-s: 24px;   /* side walls */
+    --rim-b: 40px;   /* near wall  */
+  }
+  @media (max-width: 640px) {
+    :root { --rim-t: 18px; --rim-s: 14px; --rim-b: 24px; }
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+
+  /* ============ THE PAGE IS THE INSIDE OF THE BOX ============ */
+  body {
+    color: var(--ink);
+    font-family: "Patrick Hand", "Comic Sans MS", cursive;
+    font-size: 20px;
+    line-height: 1.5;
+    overflow-x: hidden;
+    padding: calc(var(--rim-t) + 10px) calc(var(--rim-s) + 14px) calc(var(--rim-b) + 14px);
+    background-color: var(--sand);
+    background-image:
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3'/%3E%3CfeColorMatrix values='0 0 0 0 0.45  0 0 0 0 0.35  0 0 0 0 0.2  0 0 0 0.14 0'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E"),
+      radial-gradient(120vmax 60vmax at 15% -10%, rgba(242,227,194,.8), transparent 60%),
+      radial-gradient(100vmax 55vmax at 90% 35%,  rgba(201,173,121,.5), transparent 55%),
+      radial-gradient(90vmax 50vmax  at 30% 80%,  rgba(242,227,194,.5), transparent 60%),
+      radial-gradient(110vmax 60vmax at 75% 110%, rgba(185,153,104,.45), transparent 60%);
+    cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='28'%3E%3Cpath d='M4 24 C10 16 16 10 25 3 M25 3 l-4 1 M25 3 l-1 4' stroke='%235a4327' stroke-width='2.6' fill='none' stroke-linecap='round'/%3E%3C/svg%3E") 4 24, auto;
+  }
+
+  body::before {  /* faint wind ripples */
+    content: "";
+    position: fixed; inset: -10%;
+    background: repeating-linear-gradient(168deg,
+      rgba(107,82,50,.05) 0 2px, transparent 2px 34px, rgba(255,255,255,.05) 34px 36px, transparent 36px 72px);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ---- the red wooden rim, fixed around the viewport ---- */
+  .rim {
+    position: fixed;
+    z-index: 70;
+    pointer-events: none;
+    background:
+      repeating-linear-gradient(90deg, transparent 0 46px, rgba(74,55,34,.14) 46px 48px),
+      linear-gradient(180deg, #c14a3e, var(--red) 40%, var(--red-dk));
+    box-shadow: inset 0 -3px 0 rgba(42,25,15,.55), inset 0 2px 0 rgba(255,220,200,.25);
+  }
+  .rim.top    { top: 0; left: 0; right: 0; height: var(--rim-t);
+                box-shadow: inset 0 -4px 0 rgba(42,25,15,.6), 0 4px 10px rgba(74,55,34,.35); }
+  .rim.bottom { bottom: 0; left: 0; right: 0; height: var(--rim-b);
+                background:
+                  repeating-linear-gradient(90deg, transparent 0 46px, rgba(74,55,34,.14) 46px 48px),
+                  linear-gradient(0deg, var(--red-dk), var(--red) 55%, #c14a3e);
+                box-shadow: inset 0 4px 0 rgba(42,25,15,.6), 0 -5px 12px rgba(74,55,34,.4); }
+  .rim.left   { top: 0; bottom: 0; left: 0; width: var(--rim-s);
+                background:
+                  repeating-linear-gradient(0deg, transparent 0 46px, rgba(74,55,34,.14) 46px 48px),
+                  linear-gradient(90deg, #c14a3e, var(--red) 45%, var(--red-dk));
+                box-shadow: inset -3px 0 0 rgba(42,25,15,.55); }
+  .rim.right  { top: 0; bottom: 0; right: 0; width: var(--rim-s);
+                background:
+                  repeating-linear-gradient(0deg, transparent 0 46px, rgba(74,55,34,.14) 46px 48px),
+                  linear-gradient(270deg, #c14a3e, var(--red) 45%, var(--red-dk));
+                box-shadow: inset 3px 0 0 rgba(42,25,15,.55); }
+  .post {
+    position: fixed;
+    width: calc(var(--rim-s) + 16px);
+    height: calc(var(--rim-t) + 14px);
+    background: linear-gradient(135deg, #a63a2e, var(--red-dk));
+    box-shadow: inset 0 0 0 2.5px rgba(42,25,15,.5);
+    z-index: 71;
+    pointer-events: none;
+  }
+  .post.tl { top: 0; left: 0; }  .post.tr { top: 0; right: 0; }
+  .post.bl { bottom: 0; left: 0; height: calc(var(--rim-b) + 12px); }
+  .post.br { bottom: 0; right: 0; height: calc(var(--rim-b) + 12px); }
+
+  /* canvases: grooves under the content, kicked sand over EVERYTHING
+     (so a good cannonball sprays over the rim) */
+  #grooves { position: fixed; inset: 0; pointer-events: none; z-index: 1; }
+  #kick    { position: fixed; inset: 0; pointer-events: none; z-index: 90; }
+
+  main, header, footer { position: relative; z-index: 2; }
+
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px clamp(8px, 3vw, 40px);
+  }
+  .wordmark {
+    font-family: "Rock Salt", cursive;
+    font-size: 20px; letter-spacing: 2px;
+    color: var(--carve-dk); text-decoration: none;
+  }
+  nav a {
+    color: var(--carve); text-decoration: none; font-size: 20px;
+    margin-left: clamp(10px, 2.2vw, 26px);
+  }
+  nav a:hover { color: var(--red); }
+
+  /* ============ hero ============ */
+  .hero {
+    text-align: center;
+    padding: clamp(40px, 9vh, 100px) 20px 10px;
+  }
+  .carved {
+    font-family: "Rock Salt", cursive;
+    color: var(--carve);
+    text-shadow:
+      0 2px 1px rgba(255,248,230,.85),
+      0 3px 2px rgba(255,248,230,.4),
+      0 -2px 3px rgba(74,55,34,.5);
+    letter-spacing: .05em;
+  }
+  .hero h1 { font-size: clamp(44px, 9.5vw, 112px); }
+  .hero .tagline {
+    margin-top: 24px;
+    font-size: clamp(21px, 2.7vw, 29px);
+    color: var(--carve-dk);
+  }
+  .hero .note {
+    margin-top: 12px;
+    font-family: "Caveat", cursive;
+    font-size: clamp(20px, 2.3vw, 25px);
+    color: var(--carve);
+    transform: rotate(-1.2deg);
+    display: inline-block;
+  }
+
+  /* ============ CALVIN, DRAWING THE SITE INTO THE SAND ============ */
+  #calvin-station {
+    position: relative;
+    max-width: 1100px;
+    margin: 10px auto 0;
+    min-height: 230px;
+  }
+  #calvin {
+    position: absolute;
+    left: clamp(0px, 3vw, 60px);
+    bottom: 0;
+    width: clamp(120px, 17vw, 210px);
+    filter: drop-shadow(3px 6px 5px rgba(74,55,34,.3));
+    transform-origin: 50% 90%;
+    animation: bob 3.2s ease-in-out infinite;
+    z-index: 3;
+  }
+  @keyframes bob {
+    0%, 100% { transform: rotate(-1deg) translateY(0); }
+    50%      { transform: rotate(1.4deg) translateY(-3px); }
+  }
+
+  /* what he's drawing — strokes that draw themselves, carved style, looping */
+  #doodles {
+    position: absolute;
+    left: clamp(120px, 19vw, 270px);
+    right: 0;
+    bottom: 6px;
+    width: auto;
+    height: 210px;
+    color: var(--carve);
+    opacity: .85;
+  }
+  #doodles path, #doodles rect, #doodles circle {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 3.4;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-dasharray: 100;
+    stroke-dashoffset: 100;
+    animation: drawstroke 16s linear infinite;
+  }
+  /* each element starts a bit later; whole thing fades and restarts */
+  #doodles .d1 { animation-delay: 0s; }
+  #doodles .d2 { animation-delay: 1.6s; }
+  #doodles .d3 { animation-delay: 3.2s; }
+  #doodles .d4 { animation-delay: 4.6s; }
+  #doodles .d5 { animation-delay: 6s; }
+  #doodles .d6 { animation-delay: 7.4s; }
+  #doodles .d7 { animation-delay: 8.8s; }
+  @keyframes drawstroke {
+    0%       { stroke-dashoffset: 100; opacity: 1; }
+    12%      { stroke-dashoffset: 0; }
+    80%      { stroke-dashoffset: 0; opacity: 1; }
+    88%,100% { stroke-dashoffset: 0; opacity: 0; }
+  }
+
+  /* ============ HOBBES, INBOUND ============ */
+  /* outer = horizontal flight, inner = the leap arc, img = spin */
+  #hobbes-x {
+    position: fixed;
+    top: 8vh;
+    right: -240px;
+    z-index: 80;
+    pointer-events: none;
+    display: none;
+  }
+  #hobbes-y { position: relative; }
+  #hobbes {
+    width: clamp(130px, 18vw, 230px);
+    filter: drop-shadow(4px 8px 6px rgba(74,55,34,.35));
+  }
+  .flying #hobbes-x { display: block; animation: flyx 1.5s linear forwards; }
+  .flying #hobbes-y { animation: flyy 1.5s forwards; }
+  .flying #hobbes   { animation: flyspin 1.5s ease-in forwards; }
+  @keyframes flyx   { to { transform: translateX(calc(-58vw - 240px)); } }
+  @keyframes flyy   {
+    0%   { transform: translateY(0); animation-timing-function: ease-out; }
+    46%  { transform: translateY(-10vh); animation-timing-function: ease-in; }
+    100% { transform: translateY(36vh); }
+  }
+  @keyframes flyspin {
+    0%   { transform: rotate(6deg); }
+    60%  { transform: rotate(-8deg); }
+    100% { transform: rotate(-16deg); opacity: 1; }
+  }
+
+  #splopp {
+    position: fixed;
+    z-index: 95;
+    transform: translate(-50%, -50%) scale(.3) rotate(-8deg);
+    font-family: "Rock Salt", cursive;
+    font-size: clamp(30px, 6vw, 64px);
+    color: var(--red);
+    -webkit-text-stroke: 1.5px var(--ink);
+    opacity: 0;
+    pointer-events: none;
+  }
+  #splopp.go { animation: splopp .9s ease-out forwards; }
+  @keyframes splopp {
+    0%   { opacity: 0; transform: translate(-50%,-50%) scale(.3) rotate(-8deg); }
+    15%  { opacity: 1; transform: translate(-50%,-50%) scale(1.15) rotate(3deg); }
+    30%  { transform: translate(-50%,-50%) scale(1) rotate(-2deg); }
+    70%  { opacity: 1; }
+    100% { opacity: 0; transform: translate(-50%,-58%) scale(1.05); }
+  }
+  #page.shake { animation: shake .45s ease-in-out; }
+  @keyframes shake {
+    0%,100% { transform: translate(0,0); }
+    20% { transform: translate(-5px, 3px) rotate(-.3deg); }
+    40% { transform: translate(5px, -3px) rotate(.3deg); }
+    60% { transform: translate(-4px, 2px); }
+    80% { transform: translate(3px, -2px); }
+  }
+
+  /* the crater he leaves behind, fading like disturbed sand */
+  .crater {
+    position: absolute;
+    z-index: 1;
+    width: 130px; height: 60px;
+    transform: translate(-50%, -50%);
+    background:
+      radial-gradient(60% 55% at 50% 50%, rgba(107,82,50,.35), rgba(107,82,50,.12) 60%, transparent 75%);
+    border-radius: 50%;
+    box-shadow: inset 0 3px 6px rgba(74,55,34,.3), 0 -2px 4px rgba(255,248,230,.5);
+    pointer-events: none;
+    animation: craterfade 9s ease-out forwards;
+  }
+  @keyframes craterfade { 0% { opacity: 1; } 100% { opacity: 0; } }
+
+  /* the two of them at the bottom of the page */
+  #duo-slot {
+    text-align: center;
+    margin-top: 30px;
+  }
+  #duo {
+    width: clamp(160px, 26vw, 300px);
+    filter: drop-shadow(3px 6px 5px rgba(74,55,34,.3));
+    animation: bob 4.4s ease-in-out infinite;
+    transform-origin: 50% 95%;
+  }
+
+  /* tiny setup note, only shown while cutouts are missing */
+  #cutout-note {
+    position: fixed;
+    right: calc(var(--rim-s) + 12px);
+    bottom: calc(var(--rim-b) + 10px);
+    z-index: 75;
+    max-width: 250px;
+    font-family: "Caveat", cursive;
+    font-size: 17px;
+    color: var(--carve-dk);
+    background: rgba(242,227,194,.92);
+    border: 2px dashed var(--carve);
+    border-radius: 14px 5px 16px 6px;
+    padding: 8px 12px;
+    display: none;
+  }
+  #cutout-note.show { display: block; }
+
+  /* ============ sections ============ */
+  section { max-width: 1060px; margin: 0 auto; padding: 64px 24px 0; }
+  .scrawl-head {
+    display: inline-block;
+    font-family: "Rock Salt", cursive;
+    font-size: clamp(24px, 3.4vw, 34px);
+    margin-bottom: 34px;
+    transform: rotate(-.8deg);
+  }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 30px; }
+  .card {
+    position: relative;
+    display: block;
+    color: var(--ink);
+    text-decoration: none;
+    padding: 26px 26px 20px;
+    background: radial-gradient(120% 120% at 30% 20%, rgba(242,227,194,.9), rgba(242,227,194,.35) 70%);
+    border-radius: 48% 52% 55% 45% / 52% 46% 54% 48%;
+    box-shadow:
+      inset 0 2px 6px rgba(255,250,238,.8),
+      inset 0 -3px 8px rgba(107,82,50,.25),
+      0 1px 0 rgba(255,250,238,.5);
+    transition: transform .14s ease;
+  }
+  .card::after {
+    content: "";
+    position: absolute; inset: 5px;
+    border: 2.5px solid rgba(107,82,50,.4);
+    border-radius: 48% 52% 55% 45% / 52% 46% 54% 48%;
+    pointer-events: none;
+  }
+  .card:nth-child(2n) { transform: rotate(.8deg); }
+  .card:nth-child(3n) { transform: rotate(-.9deg); }
+  .card:hover { transform: translateY(-4px) rotate(0); }
+  .card h3 {
+    font-family: "Rock Salt", cursive;
+    font-size: 21px;
+    color: var(--carve);
+    text-shadow: 0 1.5px 1px rgba(255,248,230,.8), 0 -1.5px 2px rgba(74,55,34,.4);
+    margin-bottom: 8px;
+  }
+  .card p { font-size: 18px; color: var(--carve-dk); }
+  .card .n {
+    position: absolute; top: 14px; right: 22px;
+    font-family: "Caveat", cursive;
+    font-size: 19px; color: rgba(107,82,50,.55);
+  }
+
+  .latest { list-style: none; max-width: 860px; }
+  .latest li {
+    display: flex; gap: 16px; align-items: baseline;
+    padding: 14px 4px;
+    border-bottom: 2px dotted rgba(107,82,50,.45);
+    font-size: 21px;
+  }
+  .latest .when { font-family: "Caveat", cursive; color: rgba(107,82,50,.6); min-width: 96px; font-size: 20px; }
+  .latest a { color: var(--ink); text-decoration: none; }
+  .latest a:hover { color: var(--red); }
+  .latest .tag {
+    margin-left: auto; white-space: nowrap;
+    font-size: 14px; color: var(--sand-hi);
+    background: var(--carve);
+    border-radius: 9px 4px 10px 5px;
+    padding: 1px 10px;
+  }
+
+  footer {
+    margin-top: 30px;
+    padding: 20px 24px 30px;
+    text-align: center;
+    font-family: "Caveat", cursive;
+    font-size: 24px;
+    color: var(--carve-dk);
+  }
+
+  .proto-switch {
+    position: fixed; left: calc(var(--rim-s) + 10px); bottom: calc(var(--rim-b) + 8px); z-index: 80;
+    font-family: "Patrick Hand", cursive; font-size: 15px;
+    background: var(--sand-hi); border: 2px solid var(--carve-dk);
+    border-radius: 12px 4px 14px 5px;
+    padding: 4px 12px; color: var(--ink); text-decoration: none;
+    opacity: .85;
+  }
+  .proto-switch:hover { opacity: 1; }
+
+  @media (max-width: 640px) { nav a:nth-child(n+3) { display: none; } }
+  @media (prefers-reduced-motion: reduce) {
+    #calvin, #duo { animation: none; }
+    #doodles path, #doodles rect, #doodles circle {
+      animation: none; stroke-dashoffset: 0;
+    }
+    #page.shake { animation: none; }
+    html { scroll-behavior: auto; }
+  }
+</style>
+</head>
+<body>
+
+<canvas id="grooves"></canvas>
+<canvas id="kick"></canvas>
+
+<!-- the box you're inside of -->
+<div class="rim top"></div><div class="rim bottom"></div>
+<div class="rim left"></div><div class="rim right"></div>
+<div class="post tl"></div><div class="post tr"></div>
+<div class="post bl"></div><div class="post br"></div>
+
+<div id="page">
+<header>
+  <a class="wordmark" href="#">DUSTBOX</a>
+  <nav>
+    <a href="#box">Projects</a>
+    <a href="#box">Writing</a>
+    <a href="#box">Reports</a>
+    <a href="#latest">Latest</a>
+  </nav>
+</header>
+
+<main>
+  <div class="hero">
+    <h1 class="carved">DUSTBOX</h1>
+    <p class="tagline carved">Projects, prototypes, &amp; messages scrawled in the sand.</p>
+    <p class="note">you're in the box — drag to draw, click to kick sand</p>
+  </div>
+
+  <!-- Calvin kneels here, drawing the site into the sand on a loop -->
+  <div id="calvin-station">
+    <img id="calvin" src="assets/cutout-calvin.png" alt=""
+         onerror="this.dataset.missing=1; this.style.display='none'">
+    <svg id="doodles" viewBox="0 0 640 210" preserveAspectRatio="xMinYMax meet" aria-hidden="true">
+      <!-- his master plan, appearing stroke by stroke -->
+      <path class="d1" pathLength="100" d="M18,150 C60,140 96,118 128,90"/>
+      <path class="d2" pathLength="100" d="M128,90 l-16,5 M128,90 l-3,16"/>
+      <rect class="d3" pathLength="100" x="150" y="52" width="118" height="48" rx="7" transform="rotate(-2 209 76)"/>
+      <path class="d4" pathLength="100" d="M170,78 q20,-8 40,0 q18,6 38,-2"/>
+      <path class="d5" pathLength="100" d="M268,80 C308,88 336,108 356,134"/>
+      <rect class="d6" pathLength="100" x="338" y="140" width="108" height="46" rx="7" transform="rotate(1.5 392 163)"/>
+      <path class="d7" pathLength="100" d="M470,160 q34,-40 76,-50 q36,-8 72,4 M596,106 l-15,10 M596,106 l-16,-4"/>
+    </svg>
+  </div>
+
+  <section id="box">
+    <h2 class="scrawl-head carved">Dug up around here</h2>
+    <div class="grid">
+      <a class="card" href="#"><span class="n">12 builds</span>
+        <h3>Projects</h3><p>Castles that survived the tide — real, shipped, working.</p></a>
+      <a class="card" href="#"><span class="n">forever WIP</span>
+        <h3>Prototypes</h3><p>Half-built and proud of it. Poke them, they wiggle.</p></a>
+      <a class="card" href="#"><span class="n">on stage</span>
+        <h3>Talks &amp; Decks</h3><p>Presentations — show-and-tell for grown-ups.</p></a>
+      <a class="card" href="#"><span class="n">the deep digs</span>
+        <h3>Thesis &amp; Papers</h3><p>Long-form research, dug all the way down.</p></a>
+      <a class="card" href="#"><span class="n">fresh scrawls</span>
+        <h3>Blog</h3><p>Notes drawn in the sand before the wind gets them.</p></a>
+      <a class="card" href="#"><span class="n">signal only</span>
+        <h3>Reports</h3><p>Dispatches for teams &amp; leadership — clear and current.</p></a>
+    </div>
+  </section>
+
+  <section id="latest">
+    <h2 class="scrawl-head carved">Fresh tracks</h2>
+    <ul class="latest">
+      <li><span class="when">this week</span><a href="#">Sample entry — your newest prototype goes here</a><span class="tag">prototype</span></li>
+      <li><span class="when">last month</span><a href="#">Sample entry — a talk you gave, deck attached</a><span class="tag">deck</span></li>
+      <li><span class="when">spring</span><a href="#">Sample entry — quarterly report for leadership</a><span class="tag">report</span></li>
+      <li><span class="when">a while ago</span><a href="#">Sample entry — that blog post you keep meaning to finish</a><span class="tag">blog</span></li>
+    </ul>
+  </section>
+
+  <!-- the two of them, sitting in the aftermath -->
+  <div id="duo-slot">
+    <img id="duo" src="assets/cutout-duo.png" alt=""
+         onerror="this.style.display='none'">
+  </div>
+</main>
+
+<footer>
+  the wind erases everything eventually — build anyway · Dust
+</footer>
+</div>
+
+<!-- Hobbes flies in over the rim on a timer -->
+<div id="hobbes-x"><div id="hobbes-y">
+  <img id="hobbes" src="assets/cutout-hobbes.png" alt=""
+       onerror="this.dataset.missing=1">
+</div></div>
+
+<div id="splopp">SPLOPP!</div>
+
+<div id="cutout-note">
+  psst — drop <b>cutout-calvin.png</b>, <b>cutout-hobbes.png</b> &amp;
+  <b>cutout-duo.png</b> (transparent PNGs) into <b>dustbox/assets/</b>
+  and they'll be in here playing
+</div>
+
+<a class="proto-switch" href="index.html">← all prototypes</a>
+
+<script>
+/* ============================================================
+   THE LIVING SANDBOX
+   The viewport is the box: red rim fixed around the edges, sand
+   underfoot.  Calvin (your cutout) kneels and "draws" looping
+   stick doodles while grains trickle off his stroke; Hobbes (your
+   cutout) periodically leaps in over the rim and lands in a full
+   particle eruption, SPLOPP, screen shake, and a fading crater.
+   You can play too: drag to carve grooves, click to kick sand.
+   ============================================================ */
+(function () {
+  const grooves = document.getElementById('grooves');
+  const gctx = grooves.getContext('2d');
+  const kick = document.getElementById('kick');
+  const kctx = kick.getContext('2d');
+  const DPR = Math.min(window.devicePixelRatio || 1, 2);
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  let W, H;
+  function resize() {
+    const snap = document.createElement('canvas');
+    snap.width = grooves.width || 1; snap.height = grooves.height || 1;
+    snap.getContext('2d').drawImage(grooves, 0, 0);
+    W = Math.floor(innerWidth * DPR); H = Math.floor(innerHeight * DPR);
+    for (const c of [grooves, kick]) {
+      c.width = W; c.height = H;
+      c.style.width = innerWidth + 'px';
+      c.style.height = innerHeight + 'px';
+    }
+    gctx.drawImage(snap, 0, 0);
+  }
+  resize();
+  addEventListener('resize', resize);
+
+  /* ---------- grains ---------- */
+  const TONES = ['#e3cda2', '#c9ad79', '#f2e3c2', '#b3925f', '#d5bd90'];
+  const SPECK = ['#8a6a41', '#6b5232'];
+  const grains = [];
+  function grain(x, y, o = {}) {
+    if (grains.length > 900) grains.splice(0, 30);
+    const a = (o.angle ?? -Math.PI / 2) + (Math.random() - .5) * (o.spread ?? 1.4);
+    const sp = (o.speed ?? 7) * (0.35 + Math.random() * 0.9) * DPR;
+    grains.push({
+      x: x * DPR, y: y * DPR,
+      vx: Math.cos(a) * sp + (o.wind ?? 0) * DPR, vy: Math.sin(a) * sp,
+      r: (0.9 + Math.random() * 2) * DPR,
+      rot: Math.random() * Math.PI, vr: (Math.random() - .5) * .3,
+      life: 1, decay: 0.008 + Math.random() * 0.012,
+      g: (o.gravity ?? 0.17) * DPR,
+      color: Math.random() < .12 ? SPECK[(Math.random()*SPECK.length)|0] : TONES[(Math.random()*TONES.length)|0],
+    });
+  }
+  let last = performance.now();
+  function frame(now) {
+    const dt = Math.min((now - last) / 16.7, 3);
+    last = now;
+    kctx.clearRect(0, 0, W, H);
+    for (let i = grains.length - 1; i >= 0; i--) {
+      const p = grains[i];
+      p.vy += p.g * dt; p.vx *= .985; p.vy *= .992;
+      p.x += p.vx * dt; p.y += p.vy * dt; p.rot += p.vr * dt;
+      p.life -= p.decay * dt;
+      if (p.life <= 0 || p.y > H + 20) { grains.splice(i, 1); continue; }
+      kctx.save();
+      kctx.globalAlpha = Math.min(1, p.life * 1.6);
+      kctx.translate(p.x, p.y); kctx.rotate(p.rot);
+      kctx.fillStyle = p.color;
+      kctx.fillRect(-p.r, -p.r * .7, p.r * 2, p.r * 1.4);
+      kctx.restore();
+    }
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+
+  /* ---------- you, playing: drag = draw, click = kick ---------- */
+  let prev = null;
+  function carve(x, y) {
+    x *= DPR; y *= DPR;
+    if (prev) {
+      const w = 5 * DPR;
+      gctx.lineCap = 'round'; gctx.lineJoin = 'round';
+      gctx.strokeStyle = 'rgba(255,248,228,.75)';
+      gctx.lineWidth = w + 2.5 * DPR;
+      gctx.beginPath(); gctx.moveTo(prev.x + 2*DPR, prev.y + 2.5*DPR); gctx.lineTo(x + 2*DPR, y + 2.5*DPR); gctx.stroke();
+      gctx.strokeStyle = 'rgba(107,82,50,.6)';
+      gctx.lineWidth = w;
+      gctx.beginPath(); gctx.moveTo(prev.x, prev.y); gctx.lineTo(x, y); gctx.stroke();
+      if (Math.random() < 0.5) grain(x / DPR, y / DPR, { speed: 1.6, spread: 3, gravity: 0.08 });
+    }
+    prev = { x, y };
+  }
+  addEventListener('pointermove', e => { if (e.buttons === 1) carve(e.clientX, e.clientY); });
+  addEventListener('pointerdown', e => {
+    prev = null; carve(e.clientX, e.clientY);
+    for (let i = 0; i < 55; i++) grain(e.clientX, e.clientY, { speed: 8, spread: 1.6 });
+  });
+  addEventListener('pointerup', () => { prev = null; });
+
+  if (!reduced) {
+    setInterval(() => {          /* the wind slowly erases grooves */
+      if (document.hidden) return;
+      gctx.globalCompositeOperation = 'destination-out';
+      gctx.fillStyle = 'rgba(0,0,0,0.03)';
+      gctx.fillRect(0, 0, W, H);
+      gctx.globalCompositeOperation = 'source-over';
+    }, 1200);
+  }
+
+  /* ---------- Calvin: grains trickle off his drawing stick ---------- */
+  const calvin = document.getElementById('calvin');
+  const doodles = document.getElementById('doodles');
+  if (!reduced) {
+    setInterval(() => {
+      if (document.hidden) return;
+      const r = doodles.getBoundingClientRect();
+      if (r.bottom < 0 || r.top > innerHeight) return;
+      /* roughly track the looping draw cursor left-to-right */
+      const cycle = (performance.now() / 16000) % 1;
+      const x = r.left + r.width * Math.min(0.95, cycle * 1.15);
+      const y = r.top + r.height * (0.45 + Math.random() * 0.35);
+      grain(x, y, { speed: 1.4, spread: 2.6, gravity: 0.07 });
+    }, 240);
+  }
+
+  /* ---------- Hobbes: the recurring cannonball ---------- */
+  const hobbes   = document.getElementById('hobbes');
+  const hobbesX  = document.getElementById('hobbes-x');
+  const splopp   = document.getElementById('splopp');
+
+  function eruptionAt(cx, cy) {
+    for (let i = 0; i < 170; i++) {
+      grain(cx + (Math.random() - .5) * 140, cy + (Math.random() - .5) * 30, {
+        speed: 9 + Math.random() * 7, spread: 1.0, gravity: 0.2,
+        wind: (Math.random() - .5) * 5,
+      });
+    }
+    splopp.style.left = cx + 'px';
+    splopp.style.top  = (cy - 60) + 'px';
+    splopp.classList.remove('go');
+    void splopp.offsetWidth;
+    splopp.classList.add('go');
+    if (!reduced) {
+      const page = document.getElementById('page');
+      page.classList.add('shake');
+      setTimeout(() => page.classList.remove('shake'), 500);
+    }
+    const crater = document.createElement('div');
+    crater.className = 'crater';
+    crater.style.left = (cx + scrollX) + 'px';
+    crater.style.top  = (cy + scrollY) + 'px';
+    document.body.appendChild(crater);
+    setTimeout(() => crater.remove(), 9500);
+  }
+
+  function hobbesFlight() {
+    if (hobbes.dataset.missing || reduced || document.hidden) return;
+    document.body.classList.add('flying');
+    hobbesX.addEventListener('animationend', function onEnd(e) {
+      if (e.animationName !== 'flyx') return;
+      hobbesX.removeEventListener('animationend', onEnd);
+      const r = hobbes.getBoundingClientRect();
+      const cx = r.left + r.width / 2, cy = r.top + r.height * 0.8;
+      document.body.classList.remove('flying');   /* hides him in the dust */
+      eruptionAt(cx, cy);
+    });
+  }
+  /* first appearance shortly after load, then every so often */
+  setTimeout(hobbesFlight, 3500);
+  setInterval(hobbesFlight, 16000);
+
+  /* clicking Calvin makes him kick a little sand too */
+  calvin.addEventListener('pointerdown', e => {
+    const r = calvin.getBoundingClientRect();
+    for (let i = 0; i < 30; i++) grain(r.right - 20, r.bottom - 14, { speed: 5, spread: 1.8 });
+  });
+
+  /* show the setup note only if the character cutouts are missing */
+  setTimeout(() => {
+    if (calvin.dataset.missing && hobbes.dataset.missing) {
+      document.getElementById('cutout-note').classList.add('show');
+    }
+  }, 1200);
+
+  /* occasional gust across the box */
+  if (!reduced) {
+    setInterval(() => {
+      if (document.hidden || Math.random() < 0.5) return;
+      const y = Math.random() * innerHeight;
+      for (let i = 0; i < 6; i++) {
+        grain(-10, y + Math.random() * 40, { angle: 0, spread: .4, speed: 5, gravity: 0.02 });
+      }
+    }, 2600);
+  }
+})();
+</script>
+</body>
+</html>
